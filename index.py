@@ -163,7 +163,6 @@ def parse_json(folder_name):
 
 
 
-
 if __name__ == "__main__":
     client = create_elastic()
     metadata = parse_metadata("../podcasts-no-audio-13GB/metadata.tsv")

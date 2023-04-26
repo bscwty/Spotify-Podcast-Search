@@ -5,22 +5,24 @@ import search as se
 
 
 
-def search(client, query, result):
+def search(client, query, value_n, result):
     try:
         query_terms=query.get()
-        search_res = se.search(client, query_terms, 2)
+        print(value_n)
+        search_res = se.search(client, query_terms, value_n)
+        print(search_res)
 
         result.config(state=NORMAL)
         result.delete(1.0, END)
-        if len(search_res['hits']['hits']) == 0:
+        if len(search_res) == 0:
             result.insert(END, 'No results found.')
         else:
-            for line in search_res["hits"]["hits"]:
+            for line in search_res:
                 line_str = []
-                line_str.append(line['_source']['show_name'] + '\n')
-                line_str.append(line['_source']['ep_name'] + '\n')
-                line_str.append(line['_source']['words'] + '\n')
-                line_str.append('score: ' + str(line['_score']) + '\n')
+                line_str.append(line[1][1] + '\n')
+                line_str.append(line[1][2] + '\n')
+                line_str.append(line[1][3] + '\n')
+                line_str.append('score: ' + str(line[1][0]) + '\n')
                 line_str.append('---------\n')
                 result.insert(END, ''.join(line_str))
         result.config(state=DISABLED)
@@ -63,7 +65,7 @@ def main(client):
     ys.grid(row=6, column=3, rowspan=2, sticky=(N, S))
 
     #Search button
-    ttk.Button(mainframe, text='Search', command=lambda: search(client, query, result)) \
+    ttk.Button(mainframe, text='Search', command=lambda: search(client, query, int(value_n.get()) if len(value_n.get()) > 0 else 1, result)) \
         .grid(column=1, row=4, sticky=W)
 
     for child in mainframe.winfo_children():
