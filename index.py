@@ -6,15 +6,48 @@ from elasticsearch import Elasticsearch
 
 ELASTIC_PASSWORD = "Yxr9tojql4k9vvgqYNju"
 
+def create_elastic():
 
-def connect_elastic():
     client = Elasticsearch(
         "https://localhost:9200",
         ca_certs="./http_ca.crt",
         basic_auth=("elastic", ELASTIC_PASSWORD)
     )
-    return client
 
+    spotify_mapping = {
+        "mappings": {
+            "properties": {
+                "offset": {"type": "integer"},
+                "words": {"type": "text"},
+                "show_name": {"type": "text"},
+                "ep_name": {"type": "text"},
+                "show_id": {"type": "keyword"},
+                "ep_id": {"type": "keyword"},
+            }
+        }
+    }
+
+
+    metadata_mapping = {
+        "mappings": {
+            "properties": {
+                "clip_num": {"type": "integer"},
+                "show_name": {"type": "text"},
+                "ep_name": {"type": "text"},
+                "show_id": {"type": "keyword"},
+                "ep_id": {"type": "keyword"},
+                "publisher": {"type": "text"},
+                "show_descrption": {"type": "text"},
+                "ep_descrption": {"type": "text"},
+            }
+        }
+    }
+
+
+    client.indices.create(index='spotify', body=spotify_mapping)
+    client.indices.create(index='metadata', body=metadata_mapping)
+
+    return client
 
 def parse_metadata(file_name):
     data = defaultdict(dict)
@@ -29,22 +62,43 @@ def parse_metadata(file_name):
                 show_name = row[1]
                 episode_name = row[7]
 
-                data[show_code][episode_code] = (show_name, episode_name)
+                show_description = row[2]
+                episode_description = row[8]
+
+                publisher = row[3]
+
+
+                data[show_code][episode_code] = (show_name, episode_name, publisher, show_description, episode_description)
 
     return data
 
 
 def create_doc(clip, clip_idx, show_code, episode_code, global_id):
 
-    show_name, episode_name = metadata[show_code][episode_code]
+    show_name, episode_name, _, _, _ = metadata[show_code][episode_code]
     doc = {
-        "id": clip_idx,
+        "offset": clip_idx,
         "words": clip,
         "show_name": show_name,
-        "ep_name": episode_name
+        "ep_name": episode_name,
+        "show_id": show_code,
+        "ep_id": episode_code
     }
     client.index(index="spotify", id=global_id, document=doc)
 
+def add_metadata(clip_num, show_code, episode_code):
+    show_name, episode_name, publisher, show_description, episode_description = metadata[show_code][episode_code]
+    doc = {
+        "show_name": show_name,
+        "ep_name": episode_name,
+        "show_id": show_code,
+        "ep_id": episode_code,
+        "clip_num": clip_num,
+        "publisher": publisher,
+        "show_descrption": show_description,
+        "ep_descrption": episode_description,
+    }
+    client.index(index="metadata", document=doc)
 
 def parse_json(folder_name):
 
@@ -90,8 +144,8 @@ def parse_json(folder_name):
 
                                 create_doc(clip, clip_idx, show_code, episode_code, global_id)
                                 global_id += 1
-
                                 clip_idx += 1
+
                                 clip_start_time = start_time
                                 word = w["word"]
                                 word_list = [word]
@@ -103,12 +157,17 @@ def parse_json(folder_name):
                     clip = " ".join(word_list)
                     create_doc(clip, clip_idx, show_code, episode_code, global_id)
                     global_id += 1
+                    clip_idx += 1
+
+                add_metadata(clip_idx, show_code, episode_code)
+
+
 
 
 if __name__ == "__main__":
-    client = connect_elastic()
+    client = create_elastic()
     metadata = parse_metadata("../podcasts-no-audio-13GB/metadata.tsv")
 
-    parse_json("../podcasts-no-audio-13GB/spotify-podcasts-2020/podcasts-transcripts")
+    parse_json("../podcasts-no-audio-13GB/dataset")
 
 
