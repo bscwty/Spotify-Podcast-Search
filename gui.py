@@ -8,7 +8,7 @@ import search as se
 def search(client, query, result):
     try:
         query_terms=query.get()
-        search_res = se.search(query_terms, 2)
+        search_res = se.search(client, query_terms, 2)
 
         result.delete(1.0, END)
         for line in search_res["hits"]["hits"]:
