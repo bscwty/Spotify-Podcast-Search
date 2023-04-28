@@ -4,13 +4,10 @@ from utils import *
 import search as se
 
 
-
 def search(client, query, value_n, result):
     try:
-        query_terms=query.get()
-        print(value_n)
+        query_terms = query.get()
         search_res = se.search(client, query_terms, value_n)
-        print(search_res)
 
         result.config(state=NORMAL)
         result.delete(1.0, END)
@@ -19,10 +16,10 @@ def search(client, query, value_n, result):
         else:
             for line in search_res:
                 line_str = []
-                line_str.append(line[1][1] + '\n')
-                line_str.append(line[1][2] + '\n')
-                line_str.append(line[1][3] + '\n')
-                line_str.append('score: ' + str(line[1][0]) + '\n')
+                line_str.append(line[2] + '\n')
+                line_str.append(line[3] + '\n')
+                line_str.append(line[4] + '\n')
+                line_str.append('score: ' + str(line[1]) + '\n')
                 line_str.append('---------\n')
                 result.insert(END, ''.join(line_str))
         result.config(state=DISABLED)
