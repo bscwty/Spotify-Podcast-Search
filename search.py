@@ -1,5 +1,6 @@
 from datetime import datetime
 from utils import connect_elastic
+from utils import MAX_RESULT_NUMBER, AUTOMATIC_THRESHOLD
 
 '''
 TODO: episode, podcast, content
@@ -108,7 +109,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
         ep_dict[ep_hit["_source"]["offset"]] = (ep_hit["_score"], ep_hit["_source"]["words"])
     ep_dict = dict(sorted(ep_dict.items()))
 
-    threshold = ep_dict[pre_offset][0] * 0.5
+    threshold = ep_dict[pre_offset][0] * AUTOMATIC_THRESHOLD
 
     max_chunk_score = 0
 
@@ -148,7 +149,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
 
 
 def search(client, query_string, n, query_type="specified"):
-    query_results = client.search(index="spotify", query={"match": {"words": query_string}}, size="1000")
+    query_results = client.search(index="spotify", query={"match": {"words": query_string}}, size=str(MAX_RESULT_NUMBER * 100))
 
     existed_content = {}
     search_results = []
@@ -198,8 +199,10 @@ def search(client, query_string, n, query_type="specified"):
                     search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range])
                     result_num += 1
 
-        if result_num == 20:
-            return sorted(search_results, key=lambda x: x[1], reverse=True)
+        if result_num == MAX_RESULT_NUMBER:
+            break
+
+    return sorted(search_results, key=lambda x: x[1], reverse=True)
 
 
 if __name__ == "__main__":
