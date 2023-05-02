@@ -3,33 +3,26 @@ import csv
 import json
 from collections import defaultdict
 from elasticsearch import Elasticsearch
+from utils import connect_elastic
 
-ELASTIC_PASSWORD = "Yxr9tojql4k9vvgqYNju"
+
 
 def create_elastic():
 
-    client = Elasticsearch(
-        "https://localhost:9200",
-        ca_certs="./http_ca.crt",
-        basic_auth=("elastic", ELASTIC_PASSWORD)
-    )
+    client = connect_elastic()
 
     spotify_mapping = {
-        "mappings": {
             "properties": {
                 "offset": {"type": "integer"},
                 "words": {"type": "text"},
                 "show_name": {"type": "text"},
                 "ep_name": {"type": "text"},
                 "show_id": {"type": "keyword"},
-                "ep_id": {"type": "keyword"},
+                "ep_id": {"type": "keyword"}
             }
-        }
     }
 
-
     metadata_mapping = {
-        "mappings": {
             "properties": {
                 "clip_num": {"type": "integer"},
                 "show_name": {"type": "text"},
@@ -38,14 +31,13 @@ def create_elastic():
                 "ep_id": {"type": "keyword"},
                 "publisher": {"type": "text"},
                 "show_descrption": {"type": "text"},
-                "ep_descrption": {"type": "text"},
+                "ep_descrption": {"type": "text"}
             }
-        }
     }
 
 
-    client.indices.create(index='spotify', body=spotify_mapping)
-    client.indices.create(index='metadata', body=metadata_mapping)
+    client.indices.create(index='spotify', mappings=spotify_mapping)
+    client.indices.create(index='metadata', mappings=metadata_mapping)
 
     return client
 
@@ -168,5 +160,6 @@ if __name__ == "__main__":
     metadata = parse_metadata("../podcasts-no-audio-13GB/metadata.tsv")
 
     parse_json("../podcasts-no-audio-13GB/dataset")
+    #parse_json('0')
 
 
