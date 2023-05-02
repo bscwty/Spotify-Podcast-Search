@@ -1,3 +1,4 @@
+import traceback
 from tkinter import *
 from tkinter import ttk
 from utils import *
@@ -84,7 +85,7 @@ def search_clips(client, query, value_n, result, text_store):
     try:
         query_terms = query.get()
         w = query_terms.split()[0].lower()
-        search_res = se.search(client, query_terms, value_n)
+        search_res = se.search(client, query_terms, value_n, 'specified')
 
         result.config(state=NORMAL)
         result.delete(1.0, END)
@@ -101,23 +102,23 @@ def search_clips(client, query, value_n, result, text_store):
                 result.tag_config(tag_expand)
                 result.tag_bind(tag_expand, '<Button-1>', lambda e, t=tag, clips=text_store: text_expand(e, t, clips))
                 #Show title
-                result.insert(END, line[1][1] + '\n', (tag_expand,))
+                result.insert(END, line[2] + '\n', (tag_expand,))
                 #Episode title
-                result.insert(END, line[1][2] + '\n', (tag, tag_expand))
+                result.insert(END, line[3] + '\n', (tag, tag_expand))
                 #Text
                 indices = [result.index('end')]
-                indices.append(line[1][3])
+                indices.append(line[4])
                 indices.append(False)
                 text_store[i] = indices
                 line_str = []
-                line_str.append(text_search(line[1][3], w, 6) + '\n')
-                line_str.append('score: ' + str(line[1][0]) + '\n')
+                line_str.append(text_search(line[4], w, 6) + '\n')
+                line_str.append('score: ' + str(line[1]) + '\n')
                 line_str.append('---------\n')
                 result.insert(END, ''.join(line_str), (tag_expand,))
 
         result.config(state=DISABLED)
-    except Exception as e:
-        print(e)
+    except Exception:
+        print(traceback.format_exc())
         print('Error during search.')
         result.config(state=DISABLED)
 
