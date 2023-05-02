@@ -83,12 +83,16 @@ def top_search(client, query, value_n, qtype, result, text_store):
 
 def search_clips(client, query, value_n, result, text_store):
     try:
-        query_terms = query.get()
-        w = query_terms.split()[0].lower()
-        search_res = se.search(client, query_terms, value_n, 'specified')
-
         result.config(state=NORMAL)
         result.delete(1.0, END)
+
+        query_terms = query.get()
+        if len(query_terms.rstrip()) == 0:
+            result.insert(END, 'Please enter a search query in the query bar.')
+            result.config(state=DISABLED)
+            return
+        w = query_terms.split()[0].lower()
+        search_res = se.search(client, query_terms, value_n, 'specified' if value_n > 0 else 'automatic')
 
         if len(search_res) == 0:
             result.insert(END, 'No results found.')
@@ -150,14 +154,14 @@ def main(client):
 
     #Validation
     def check_choose_n(val):
-        return (val.isnumeric() and len(val) < 3 and int(val) > 0 and int(val) <= 20) or len(val) == 0
+        return (val.isnumeric() and len(val) < 3 and int(val) >= 0 and int(val) <= 20) or len(val) == 0
     check_choose_n_wrapper = (root.register(check_choose_n), '%P')
 
     #Choose clip size spinbox and label
     label_n = ttk.Label(topframe, text='Choose clip size (1=30 seconds):')
     label_n.grid(column=0, row=3, sticky=W)
     value_n = StringVar()
-    choose_n = ttk.Spinbox(topframe, width=7, from_=1, to=20, textvariable=value_n, validate='all', validatecommand=check_choose_n_wrapper)
+    choose_n = ttk.Spinbox(topframe, width=7, from_=0, to=20, textvariable=value_n, validate='all', validatecommand=check_choose_n_wrapper)
     choose_n.grid(column=0, row=4, sticky=W)
     choose_n.config(state=NORMAL)
 
@@ -179,7 +183,7 @@ def main(client):
     #Search button
     searchb = ttk.Button(topframe, text='Search', \
             command=lambda: top_search(
-                client, query, int(value_n.get()) if len(value_n.get()) > 0 else 1, qtype, result, text_store))
+                client, query, int(value_n.get()) if len(value_n.get()) > 0 else 0, qtype, result, text_store))
     searchb.grid(column=0, row=5, sticky=W)
 
     #Output text
@@ -193,7 +197,7 @@ def main(client):
     #rowspan=2,
 
     root.bind('<Return>',
-              lambda event: top_search(client, query, int(value_n.get()) if len(value_n.get()) > 0 else 1, qtype, result, text_store))
+              lambda event: top_search(client, query, int(value_n.get()) if len(value_n.get()) > 0 else 0, qtype, result, text_store))
 
     root.mainloop()
 
