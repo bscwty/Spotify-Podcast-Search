@@ -91,6 +91,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
             }
         }
     }
+
     meta_results = client.search(index="metadata", query=query)
     clip_num = meta_results["hits"]["hits"][0]["_source"]["clip_num"]
 
@@ -111,7 +112,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
 
     threshold = ep_dict[pre_offset][0] * AUTOMATIC_THRESHOLD
 
-    max_chunk_score = 0
+    max_chunk_score = ep_dict[pre_offset][0]
 
     left = pre_offset - 1
     right = pre_offset + 1
@@ -138,8 +139,6 @@ def automatic_query(client, ep_id, query_string, pre_offset):
                 max_chunk_score += ep_dict[right][0]
                 text.append(ep_dict[right][1])
                 right += 1
-
-
 
     text = " ".join(text)
     offset_range = list(sorted(offset_range))
@@ -208,12 +207,12 @@ def search(client, query_string, n, query_type="specified"):
 if __name__ == "__main__":
 
     client = connect_elastic()
-    a = search(client, "virus", 6, "specified")
-    for r in a:
-        print(r[0], r[6])
+    # a = search(client, "virus", 6, "specified")
+    # for r in a:
+    #     print(r[0], r[6])
 
     print("------")
 
     a = search(client, "virus", 6, "automatic")
     for r in a:
-        print(r[0], r[6])
+        print(r)
