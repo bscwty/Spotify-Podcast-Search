@@ -1,0 +1,4 @@
+
+
+# - two option searching, by podcasts, by episodes (in case of an episode name quary for example), or by n-clips
+# - possibility to go from one option to another
