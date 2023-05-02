@@ -2,27 +2,6 @@ from collections import defaultdict
 from utils import connect_elastic
 
 
-'''
-TODO:
-*highlight result terms
-*Types of search we can do:
- -by show: sort the show based on the result of a query on its name and/or description and content of its episodes. number of results ?
- -by episode: sort the episodes on the result of a query on its name and/or description or its content. number of results ?
- -by content: based on fixed n or automatic, we show list of clips corresponding to the query. Have the possibility of 
- going to its show or episode and list all relevant clips from there. Maybe possibility of sorting based on show or episode.
- add top x results as feature (or show pages of results).
- 
- 
-Question:
-clip_num in metadata mapping?
-have metadata as global var in whole project
-
-
-password for loaded tar from windows
-X75e1zOzkPp2eyyMJ0_g
-'''
-
-
 def epi_total_score(clips):
     return sum([clip[1] for clip in clips])
 
