@@ -11,7 +11,8 @@ class SearchRes():
     def __init__(self):
         self.results = dict()
         self.expanded = None
-        self.relevance_vector = None
+        self.relevance_matrix = None
+        self.nDCG_vector = None
 
     def __len__(self):
         return len(self.results)
@@ -26,21 +27,29 @@ class SearchRes():
         self.results[key][2] = status
 
     def init_vector(self, n):
-        self.relevance_vector = np.zeros((n, 4), dtype=int)
+        self.relevance_matrix = np.zeros((n, 4), dtype=int)
+        self.nDCG_vector = np.zeros(n)
 
     def get_relevance(self, idx):
-        rel = self.relevance_vector[idx].nonzero()
+        rel = self.relevance_matrix[idx].nonzero()
         if len(rel[0]) > 0:
             return rel[0][0]
         return None
 
     def set_relevance(self, idx, r):
-        self.relevance_vector[idx] = 0
-        self.relevance_vector[idx, r] = 1
+        self.relevance_matrix[idx] = 0
+        self.relevance_matrix[idx, r] = 1
+
+    def get_nDCG(self, idx):
+        return self.nDCG_vector[idx]
+    
+    def set_nDCG(self, idx, ndcg):
+        self.nDCG_vector[idx] = ndcg
 
     def clear(self):
         self.results.clear()
-        self.relevance_vector = None
+        self.relevance_matrix = None
+        self.nDCG_vector = None
 
 
 def text_search(text, word, window):
@@ -100,25 +109,28 @@ def relevance(event, tag, clips):
             if span.string.split('.')[0] == event.widget.index(f'{tag}.first').split('.')[0]:
                 other_r = i
                 break
-        event.widget.tag_remove('boldtext', event.widget.tag_ranges('boldtext')[other_r], event.widget.tag_ranges('boldtext')[other_r+1])
+        event.widget.tag_remove(
+            'boldtext', event.widget.tag_ranges('boldtext')[other_r], \
+            event.widget.tag_ranges('boldtext')[other_r+1])
     clips.set_relevance(idx, r)
     event.widget.tag_add('boldtext', f'{tag}.first', f'{tag}.last')
 
 ######################
 
 
-def top_search(client, query, value_n, qtype, result, text_store):
+def top_search(client, query, value_n, qtype, result, compute, text_store):
     search_type = qtype.get()
     if search_type == 'Clips':
-        search_clips(client, query, value_n, result, text_store)
+        search_clips(client, query, value_n, result, compute, text_store)
     elif search_type == 'Episodes':
         pass
     else:
         pass
 
 
-def search_clips(client, query, value_n, result, text_store):
+def search_clips(client, query, value_n, result, compute, text_store):
     try:
+        compute.config(state=DISABLED)
         result.config(state=NORMAL)
         result.delete(1.0, END)
         text_store.clear()
@@ -174,6 +186,7 @@ def search_clips(client, query, value_n, result, text_store):
                 result.insert(END, '\t2', (tag_rel2,))
                 result.insert(END, '\t3\n', (tag_rel3,))
                 result.insert(END, '---------\n')
+            compute.config(state=NORMAL)
 
         result.config(state=DISABLED)
     except Exception:
@@ -182,11 +195,28 @@ def search_clips(client, query, value_n, result, text_store):
         result.config(state=DISABLED)
 
 
+def nDCG(rank, window, text_store):
+    relevance_vector = text_store.relevance_matrix.nonzero()[1]
+    sorted_vector = np.sort(relevance_vector)[::-1]
+    num_results = len(relevance_vector)
+    dCG, iDCG = 0, 0
+    for i in range(num_results):
+        dCG += relevance_vector[i] / np.log2(i+2)
+        iDCG += sorted_vector[i] / np.log2(i+2)
+        text_store.set_nDCG(i, round(dCG / iDCG, 5) if iDCG > 0 else 0)
+    window.config(state=NORMAL)
+    window.delete(1.0, END)
+    window.insert(END, text_store.get_nDCG(rank if rank < num_results else num_results-1))
+    window.config(state=DISABLED)
+
+
 def main(client):
     root = Tk()
     root.title('Spotify Podcast Search')
     theme = ttk.Style()
     theme.theme_use('clam')
+
+    text_store = SearchRes()
 
     mainframe = ttk.Frame(root, padding=20)
     mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
@@ -198,7 +228,7 @@ def main(client):
 
     #Search area frame
     topframe = ttk.Frame(mainframe, relief='ridge', padding=10)
-    topframe.grid(column=0, row=0, pady=(0, 20))
+    topframe.grid(column=0, row=0, sticky=(W, E), pady=(0, 20))
 
     #Query bar
     label_q = ttk.Label(topframe, text='Enter query:')
@@ -216,8 +246,9 @@ def main(client):
     label_n = ttk.Label(topframe, text='Choose clip size (0=automatic, x=30x seconds):')
     label_n.grid(column=0, row=3, columnspan=2, sticky=W)
     value_n = StringVar()
-    choose_n = ttk.Spinbox(topframe, width=7, from_=0, to=20, textvariable=value_n, validate='all', validatecommand=check_choose_n_wrapper)
-    choose_n.grid(column=0, row=4, sticky=W)
+    choose_n = ttk.Spinbox(
+        topframe, width=7, from_=0, to=20, textvariable=value_n, validate='all', validatecommand=check_choose_n_wrapper)
+    choose_n.grid(column=0, row=4, sticky=W, pady=5)
     choose_n.config(state=NORMAL)
 
     #Query type (placed above previous)
@@ -233,12 +264,34 @@ def main(client):
         button = ttk.Radiobutton(topframe, text=type, variable=qtype, value=type, command=querystates[i])
         button.grid(column=i, row=2, sticky=W)
 
-    text_store = SearchRes()
+    #Evaluation area frame
+    bottomframe = ttk.Frame(mainframe, relief='ridge', padding=10)
+    bottomframe.grid(column=0, row=7, sticky=(W, E), pady=(20, 0))
+
+    #nDCG output window
+    compute_window = Text(bottomframe, width=20, height=1)
+    compute_window.grid(column=3, row=8, padx=10)
+    compute_window.config(state=DISABLED)
+
+    #nDCG checkbox and label
+    label_at = ttk.Label(bottomframe, text='@')
+    label_at.grid(column=1, row=8, sticky=W)
+    nDCG_at = StringVar()
+    nDCG_box = ttk.Combobox(
+        bottomframe, width=5, state='readonly', textvariable=nDCG_at, values=[str(i) for i in range(1, 21)])
+    nDCG_box.grid(column=2, row=8)
+
+    #nDCG button
+    compute = ttk.Button(
+        bottomframe, text='Compute nDCG', \
+            command=lambda: nDCG(int(nDCG_at.get()) - 1 if len(nDCG_at.get()) > 0 else 0, compute_window, text_store))
+    compute.grid(column=0, row=8)
+    compute.config(state=DISABLED)
 
     #Search button
     searchb = ttk.Button(topframe, text='Search', \
-            command=lambda: top_search(
-                client, query, int(value_n.get()) if len(value_n.get()) > 0 else 0, qtype, result, text_store))
+        command=lambda: top_search(
+            client, query, int(value_n.get()) if len(value_n.get()) > 0 else 0, qtype, result, compute, text_store))
     searchb.grid(column=0, row=5, sticky=W)
 
     #Output text
@@ -247,9 +300,11 @@ def main(client):
     result['yscrollcommand'] = text_scroll.set
     result.grid(column=0, row=6, sticky=(N, W, E, S))
     text_scroll.grid(column=1, row=6, sticky=(N, S))
+    result.config(state=DISABLED)
 
     root.bind('<Return>',
-              lambda event: top_search(client, query, int(value_n.get()) if len(value_n.get()) > 0 else 0, qtype, result, text_store))
+        lambda event: top_search(
+            client, query, int(value_n.get()) if len(value_n.get()) > 0 else 0, qtype, result, compute, text_store))
 
     root.mainloop()
 
