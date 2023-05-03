@@ -1,3 +1,4 @@
+import numpy as np
 import traceback
 from tkinter import *
 from tkinter import ttk
@@ -10,6 +11,10 @@ class SearchRes():
     def __init__(self):
         self.results = dict()
         self.expanded = None
+        self.relevance_vector = None
+
+    def __len__(self):
+        return len(self.results)
 
     def __getitem__(self, key):
         return self.results[key]
@@ -19,6 +24,23 @@ class SearchRes():
 
     def set_expand_status(self, key, status):
         self.results[key][2] = status
+
+    def init_vector(self, n):
+        self.relevance_vector = np.zeros((n, 4), dtype=int)
+
+    def get_relevance(self, idx):
+        rel = self.relevance_vector[idx].nonzero()
+        if len(rel[0]) > 0:
+            return rel[0][0]
+        return None
+
+    def set_relevance(self, idx, r):
+        self.relevance_vector[idx] = 0
+        self.relevance_vector[idx, r] = 1
+
+    def clear(self):
+        self.results.clear()
+        self.relevance_vector = None
 
 
 def text_search(text, word, window):
@@ -68,6 +90,20 @@ def text_expand(event, tag, clips):
     event.widget.config(state=DISABLED)
     return 'break'
 
+
+def relevance(event, tag, clips):
+    idx = int(tag.split('_')[1])
+    r = int(event.widget.get(f'{tag}.first', f'{tag}.last').strip())
+    if clips.get_relevance(idx) is not None:
+        other_r = 0
+        for i, span in enumerate(event.widget.tag_ranges('boldtext')):
+            if span.string.split('.')[0] == event.widget.index(f'{tag}.first').split('.')[0]:
+                other_r = i
+                break
+        event.widget.tag_remove('boldtext', event.widget.tag_ranges('boldtext')[other_r], event.widget.tag_ranges('boldtext')[other_r+1])
+    clips.set_relevance(idx, r)
+    event.widget.tag_add('boldtext', f'{tag}.first', f'{tag}.last')
+
 ######################
 
 
@@ -85,6 +121,7 @@ def search_clips(client, query, value_n, result, text_store):
     try:
         result.config(state=NORMAL)
         result.delete(1.0, END)
+        text_store.clear()
 
         query_terms = query.get()
         if len(query_terms.rstrip()) == 0:
@@ -97,33 +134,51 @@ def search_clips(client, query, value_n, result, text_store):
         if len(search_res) == 0:
             result.insert(END, 'No results found.')
         else:
+            text_store.init_vector(len(search_res))
             for i, line in enumerate(search_res):
                 #Tags
+                result.tag_config('boldtext', font=f'{result.cget("font")} 12 bold')
                 tag = f'tag_{i}'
                 result.tag_config(tag, foreground='blue')
                 result.tag_bind(tag, '<Button-1>', lambda e, t=tag: ep_test(e, t))
                 tag_expand = f'tagexp_{i}'
                 result.tag_config(tag_expand)
-                result.tag_bind(tag_expand, '<Button-1>', lambda e, t=tag, clips=text_store: text_expand(e, t, clips))
+                result.tag_bind(tag_expand, '<Button-1>', lambda e, t=tag_expand, clips=text_store: text_expand(e, t, clips))
+                tag_rel0 = f'tagrel0_{i}'
+                result.tag_config(tag_rel0)
+                result.tag_bind(tag_rel0, '<Button-1>', lambda e, t=tag_rel0, clips=text_store: relevance(e, t, clips))
+                tag_rel1 = f'tagrel1_{i}'
+                result.tag_config(tag_rel1)
+                result.tag_bind(tag_rel1, '<Button-1>', lambda e, t=tag_rel1, clips=text_store: relevance(e, t, clips))
+                tag_rel2 = f'tagrel2_{i}'
+                result.tag_config(tag_rel2)
+                result.tag_bind(tag_rel2, '<Button-1>', lambda e, t=tag_rel2, clips=text_store: relevance(e, t, clips))
+                tag_rel3 = f'tagrel3_{i}'
+                result.tag_config(tag_rel3)
+                result.tag_bind(tag_rel3, '<Button-1>', lambda e, t=tag_rel3, clips=text_store: relevance(e, t, clips))
                 #Show title
-                result.insert(END, line[2] + '\n', (tag_expand,))
+                result.insert(END, f'{i+1}. {line[2]}\n', (tag_expand,))
                 #Episode title
-                result.insert(END, line[3] + '\n', (tag, tag_expand))
+                result.insert(END, f'{line[3]}\n', (tag, tag_expand))
                 #Text
                 indices = [result.index('end')]
                 indices.append(line[4])
                 indices.append(False)
                 text_store[i] = indices
-                line_str = []
-                line_str.append(text_search(line[4], w, 6) + '\n')
-                line_str.append('score: ' + str(line[1]) + '\n')
-                line_str.append('---------\n')
-                result.insert(END, ''.join(line_str), (tag_expand,))
+                result.insert(END, f'{text_search(line[4], w, 6)}\nscore: {line[1]}\n', (tag_expand,))
+                result.insert(END, 'Select relevance:')
+                result.insert(END, '\t0\t', (tag_rel0,))
+                result.tag_add('boldtext', f'{tag_rel0}.first', f'{tag_rel0}.last')
+                text_store.set_relevance(i, 0)
+                result.insert(END, '\t1', (tag_rel1,))
+                result.insert(END, '\t2', (tag_rel2,))
+                result.insert(END, '\t3\n', (tag_rel3,))
+                result.insert(END, '---------\n')
 
         result.config(state=DISABLED)
     except Exception:
         print(traceback.format_exc())
-        print('Error during search.')
+        result.insert(END, 'Error during search.')
         result.config(state=DISABLED)
 
 
@@ -158,8 +213,8 @@ def main(client):
     check_choose_n_wrapper = (root.register(check_choose_n), '%P')
 
     #Choose clip size spinbox and label
-    label_n = ttk.Label(topframe, text='Choose clip size (1=30 seconds):')
-    label_n.grid(column=0, row=3, sticky=W)
+    label_n = ttk.Label(topframe, text='Choose clip size (0=automatic, x=30x seconds):')
+    label_n.grid(column=0, row=3, columnspan=2, sticky=W)
     value_n = StringVar()
     choose_n = ttk.Spinbox(topframe, width=7, from_=0, to=20, textvariable=value_n, validate='all', validatecommand=check_choose_n_wrapper)
     choose_n.grid(column=0, row=4, sticky=W)
@@ -192,9 +247,6 @@ def main(client):
     result['yscrollcommand'] = text_scroll.set
     result.grid(column=0, row=6, sticky=(N, W, E, S))
     text_scroll.grid(column=1, row=6, sticky=(N, S))
-
-    #columnspan=3,
-    #rowspan=2,
 
     root.bind('<Return>',
               lambda event: top_search(client, query, int(value_n.get()) if len(value_n.get()) > 0 else 0, qtype, result, text_store))
