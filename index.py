@@ -2,6 +2,7 @@ import os
 import csv
 import json
 from collections import defaultdict
+from argparse import ArgumentParser
 from elasticsearch import Elasticsearch
 from utils import connect_elastic
 
@@ -14,7 +15,16 @@ def create_elastic():
     spotify_mapping = {
             "properties": {
                 "offset": {"type": "integer"},
-                "words": {"type": "text"},
+                "words": {
+                    "type": "text",
+                    #For porter stemming analyzer, defined in setting
+                    "fields": {
+                        "stemmed": {
+                            "type": "text",
+                            "analyzer": "podcast_analyzer"
+                        }
+                    }
+                },
                 "show_name": {"type": "text"},
                 "ep_name": {"type": "text"},
                 "show_id": {"type": "keyword"},
@@ -35,11 +45,39 @@ def create_elastic():
             }
     }
 
+    setting = {
+        "similarity": {
+            "default": {
+                "type": "BM25",
+                "b": 0.4,
+                "k1": 0.9
+            }
+        },
+        #Porter stemming
+        "analysis": {
+            "analyzer": {
+                "podcast_analyzer": {
+                    "tokenizer": "whitespace",
+                    "filter": ["lowercase", "porter_stem"]
+                }
+            }
+        }
+    }
 
-    client.indices.create(index='spotify', mappings=spotify_mapping)
+    client.indices.create(index='spotify', mappings=spotify_mapping, settings=setting)
     client.indices.create(index='metadata', mappings=metadata_mapping)
 
     return client
+
+def delete_index(indices):
+    client = connect_elastic()
+
+    for i in indices:
+        client.indices.delete(index=i)
+
+def index_stats(client):
+    size = client.indices.stats(index='spotify', metric=('store'))
+    print(size)
 
 def parse_metadata(file_name):
     data = defaultdict(dict)
@@ -115,6 +153,8 @@ def parse_json(folder_name):
                 word_list = []
                 clip_idx = 0
 
+                identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
+
                 for idx1, alternatives in enumerate(results):
 
                     if len(alternatives["alternatives"][0]) > 0:
@@ -156,10 +196,16 @@ def parse_json(folder_name):
 
 
 if __name__ == "__main__":
-    client = create_elastic()
-    metadata = parse_metadata("../podcasts-no-audio-13GB/metadata.tsv")
+    parser = ArgumentParser(prog="Podcast Indexer")
+    parser.add_argument('-d', '--delete', nargs='+')
+    args = parser.parse_args()
 
-    parse_json("../podcasts-no-audio-13GB/dataset")
-    #parse_json('0')
+    if args.delete is not None:
+        delete_index(args.delete)
+    else:
+        client = create_elastic()
+        metadata = parse_metadata("../podcasts-no-audio-13GB/metadata.tsv")
+        parse_json("../podcasts-no-audio-13GB/dataset")
+        index_stats(client)
 
 
