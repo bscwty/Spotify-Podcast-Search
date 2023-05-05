@@ -26,8 +26,8 @@ class SearchRes():
     def set_expand_status(self, key, status):
         self.results[key][2] = status
 
-    def init_vector(self, n):
-        self.relevance_matrix = np.zeros((n, 4), dtype=int)
+    def init_vector(self, n, levels):
+        self.relevance_matrix = np.zeros((n, levels), dtype=int)
         self.nDCG_vector = np.zeros(n)
 
     def get_relevance(self, idx):
@@ -68,12 +68,20 @@ class SearchGui():
         #Menu
         self.menubar = Menu(self.root)
         self.root['menu'] = self.menubar
-        self.menu_eval = Menu(self.menubar)
-        self.menubar.add_cascade(menu=self.menu_eval, label='Options')
-        self.option_eval = StringVar()
-        self.menu_eval.add_checkbutton(
-            label='Evaluation', variable=self.option_eval, onvalue=1, offvalue=0, \
-            command=lambda v=self.option_eval: self.display_eval(v))
+        self.menu_options = Menu(self.menubar)
+        self.menubar.add_cascade(menu=self.menu_options, label='Options')
+        self.menu_eval = Menu(self.menu_options)
+        self.menu_options.add_cascade(menu=self.menu_eval, label='Evaluation')
+        self.option = StringVar(None, '0')
+        self.menu_eval.add_radiobutton(
+            label='None', variable=self.option, value=0, \
+            command=lambda v=self.option: self.display_eval(v))
+        self.menu_eval.add_radiobutton(
+            label='Topical search', variable=self.option, value=1, \
+            command=lambda v=self.option: self.display_eval(v))
+        self.menu_eval.add_radiobutton(
+            label='Refinding or Known item search', variable=self.option, value=2, \
+            command=lambda v=self.option: self.display_eval(v))
 
         #Top frame
         self.mainframe = ttk.Frame(root, padding=20)
@@ -142,7 +150,7 @@ class SearchGui():
     
 
     def display_eval(self, val):
-        if val.get() == '1':
+        if val.get() in ['1', '2']:
             #Evaluation area frame
             self.bottomframe = ttk.Frame(self.mainframe, relief='ridge', padding=10)
             self.bottomframe.grid(column=0, row=7, sticky=(W, E), pady=(20, 0))
@@ -171,7 +179,8 @@ class SearchGui():
                     command=lambda: self.nDCG(int(self.nDCG_at.get()) - 1 if len(self.nDCG_at.get()) > 0 else 0))
             self.compute.grid(column=0, row=9)
         else:
-            self.bottomframe.grid_remove()
+            if hasattr(self, 'bottomframe'):
+                self.bottomframe.grid_remove()
         
     
     def top_search(self, client, value_n):
@@ -263,8 +272,8 @@ class SearchGui():
     
     def search_clips(self, client, value_n):
         try:
-            eval = self.option_eval.get()
-            if eval == '1':
+            eval = self.option.get()
+            if eval in ['1', '2']:
                 self.compute_window.config(state=NORMAL)
                 self.prec_window.config(state=NORMAL)
                 self.compute_window.delete(1.0, END)
@@ -288,7 +297,7 @@ class SearchGui():
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
             else:
-                self.text_store.init_vector(len(search_res))
+                self.text_store.init_vector(len(search_res), 4 if self.option in ['0', '1'] else 5)
                 for i, line in enumerate(search_res):
                     #Tags
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
@@ -299,7 +308,7 @@ class SearchGui():
                     self.result.tag_config(tag_expand)
                     self.result.tag_bind(
                         tag_expand, '<Button-1>', lambda e, t=tag_expand: self.text_expand(e, t))
-                    if eval == '1':
+                    if eval in ['1', '2']:
                         tag_rel0 = f'tagrel0_{i}'
                         self.result.tag_config(tag_rel0)
                         self.result.tag_bind(
@@ -316,6 +325,11 @@ class SearchGui():
                         self.result.tag_config(tag_rel3)
                         self.result.tag_bind(
                             tag_rel3, '<Button-1>', lambda e, t=tag_rel3: self.relevance(e, t))
+                    if eval == '2':
+                        tag_rel4 = f'tagrel4_{i}'
+                        self.result.tag_config(tag_rel4)
+                        self.result.tag_bind(
+                            tag_rel4, '<Button-1>', lambda e, t=tag_rel4: self.relevance(e, t))
                     #Show title
                     self.result.insert(END, f'{i+1}. {line[2]}\n', (tag_expand,))
                     #Episode title
@@ -326,16 +340,20 @@ class SearchGui():
                     indices.append(False)
                     self.text_store[i] = indices
                     self.result.insert(END, f'{self.text_search(line[4], w, 6)}\nscore: {line[1]}\n', (tag_expand,))
-                    if eval == '1':
+                    if eval in ['1', '2']:
                         self.result.insert(END, 'Select relevance:')
                         self.result.insert(END, '\t0\t', (tag_rel0,))
                         self.result.tag_add('boldtext', f'{tag_rel0}.first', f'{tag_rel0}.last')
                         self.text_store.set_relevance(i, 0)
                         self.result.insert(END, '\t1', (tag_rel1,))
                         self.result.insert(END, '\t2', (tag_rel2,))
-                        self.result.insert(END, '\t3\n', (tag_rel3,))
+                        self.result.insert(END, '\t3', (tag_rel3,))
+                        if eval != '2':
+                            self.result.insert(END, '\n')
+                    if eval == '2':
+                        self.result.insert(END, '\t4\n', (tag_rel4,))
                     self.result.insert(END, '---------\n')
-                if eval == '1':
+                if eval in ['1', '2']:
                     self.compute.config(state=NORMAL)
                     self.nDCG_box.config(state=NORMAL)
 
