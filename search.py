@@ -2,10 +2,6 @@ from datetime import datetime
 from utils import connect_elastic
 from utils import MAX_RESULT_NUMBER, AUTOMATIC_THRESHOLD
 
-'''
-TODO: episode, podcast, content
-'''
-
 
 def query(client, ep_id, query_string, pre_offset, n):
     query = {
@@ -168,7 +164,8 @@ def search(client, query_string, n, query_type="specified"):
                 existed_content[ep_id] = []
                 existed_content[ep_id].append(pre_offset)
                 offset = pre_offset
-                search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset]])
+                time = "%.1f min -- %.1f min"%(0.5 * offset, 0.5 * offset + 0.5)
+                search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset], time])
                 result_num += 1
             else:
                 if query_type == "specified":
@@ -178,14 +175,21 @@ def search(client, query_string, n, query_type="specified"):
 
                 existed_content[ep_id] = []
                 existed_content[ep_id].extend(offset_range)
-                search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range])
+
+                if len(offset_range) == 1:
+                    time = "%.1f min -- %.1f min"%(0.5 * offset_range[0], 0.5 * offset_range[0] + 0.5)
+                else:
+                    time = "%.1f min -- %.1f min" % (0.5 * offset_range[0], 0.5 * offset_range[-1] + 0.5)
+
+                search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range, time])
                 result_num += 1
         else:
             if n == 1:
                 if pre_offset not in existed_content[ep_id]:
                     existed_content[ep_id].append(pre_offset)
                     offset = pre_offset
-                    search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset]])
+                    time = "%.1f min -- %.1f min"%(0.5 * offset, 0.5 * offset + 0.5)
+                    search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset], time])
                     result_num += 1
             else:
                 if query_type == "specified":
@@ -195,7 +199,13 @@ def search(client, query_string, n, query_type="specified"):
 
                 if len(set(offset_range).intersection(set(existed_content[ep_id]))) == 0:
                     existed_content[ep_id].extend(offset_range)
-                    search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range])
+
+                    if len(offset_range) == 1:
+                        time = "%.1f min -- %.1f min" % (0.5 * offset_range[0], 0.5 * offset_range[0] + 0.5)
+                    else:
+                        time = "%.1f min -- %.1f min" % (0.5 * offset_range[0], 0.5 * offset_range[-1] + 0.5)
+
+                    search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range, time])
                     result_num += 1
 
         if result_num == MAX_RESULT_NUMBER:
@@ -207,9 +217,6 @@ def search(client, query_string, n, query_type="specified"):
 if __name__ == "__main__":
 
     client = connect_elastic()
-    # a = search(client, "virus", 6, "specified")
-    # for r in a:
-    #     print(r[0], r[6])
 
     print("------")
 
