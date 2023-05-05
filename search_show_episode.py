@@ -23,92 +23,121 @@ def episode_search(query, nbr_of_results):
     for result in results["hits"]["hits"]:
         clip_score = result["_score"]
         source_data = result["_source"]
-        clip_id = source_data["id"]
+        clip_id = source_data["offset"]
         clip_text = source_data["words"]
 
         epi_name = source_data["ep_name"]
-        show_name = source_data["show_name"]
 
         clip_info = [clip_id, clip_score, clip_text]
         if epi_name in episodes_by_clip_dict.keys():
             episodes_by_clip_dict[epi_name]["clips"].append(clip_info)
         else:
+            epi_id = source_data["ep_id"]
+            show_name = source_data["show_name"]
+            epi_query = {
+                "bool": {
+                    "filter":
+                        {"term": {"ep_id": epi_id}}
+                }
+            }
+            episode = client.search(index="metadata", query=epi_query, size=1)  # TODO reflect on 1
+
             episodes_by_clip_dict[epi_name]["clips"] = [clip_info, ]
             episodes_by_clip_dict[epi_name]["show name"] = show_name
-            episodes_by_clip_dict[epi_name]["episode description"] = "None"  # TODO
+            ep_source = episode["hits"]["hits"][0]["_source"]
+            episodes_by_clip_dict[epi_name]["episode description"] = ep_source["ep_descrption"]
+            episodes_by_clip_dict[epi_name]["publisher"] = ep_source["publisher"]
+
+        # TODO change if else to one bloc
 
     # sum scores
     out1 = sorted(episodes_by_clip_dict.items(), key=lambda x: epi_total_score(x[1]["clips"]), reverse=True)
 
-    # 2.results based on name, should be match here
+    # 2.results based on name, should be a match here
     # for these episodes, look for info to fill out the episodes dictionary information
 
     names_query = {
-        "bool": {
-            "must": [
-                {"term": {"ep_name": query}}
-            ]
+        "match": {
+            "ep_name": query
         }
     }
-    episodes_by_name = client.search(index="spotify", query=names_query)
+    episodes_by_name = client.search(index="metadata", query=names_query, size=5)  # TODO 5 as a variable, we have duplicates here cause of indexing
 
     episodes_by_name_dict = defaultdict(dict)
 
-    for episode in episodes_by_name:
+    for episode in episodes_by_name["hits"]["hits"]:
+        epi_name = episode["_source"]["ep_name"]
+        epi_id = episode["_source"]["ep_id"]
+        show_name = episode["_source"]["show_name"]
 
-        clip_score = episode["_score"]
-        source_data = episode["_source"]
-        clip_id = source_data["id"]
-        clip_text = source_data["words"]
+        epi_query = {
+            "bool": {
+                "filter":
+                    {"term": {"ep_id": epi_id}}
+            }
+        }  # try bool must term
+        epi_clips = client.search(index="spotify", query=epi_query, size=10)
 
-        epi_name = source_data["ep_name"]
-        show_name = source_data["show_name"]
+        episodes_by_name_dict[epi_name]["score"] = episode["_score"]
+        episodes_by_name_dict[epi_name]["show name"] = show_name
+        episodes_by_name_dict[epi_name]["episode description"] = episode["_source"][
+            "ep_descrption"]
+        episodes_by_name_dict[epi_name]["publisher"] = episode["_source"][
+            "publisher"]
+        episodes_by_name_dict[epi_name]["clips"] = []
 
-        clip_info = [clip_id, clip_score, clip_text]
-        if epi_name in episodes_by_name_dict.keys():
+        for clip in epi_clips["hits"]["hits"]:
+            clip_score = clip["_score"]
+            source_data = clip["_source"]
+            clip_id = source_data["offset"]
+            clip_text = source_data["words"]
+
+            clip_info = [clip_id, clip_score, clip_text]
             episodes_by_name_dict[epi_name]["clips"].append(clip_info)
-        else:
-            episodes_by_name_dict[epi_name]["clips"] = [clip_info, ]
-            episodes_by_name_dict[epi_name]["show name"] = show_name
-            episodes_by_name_dict[epi_name]["episode description"] = "None"  # TODO
 
-    out2 = sorted(episodes_by_name_dict.items(), key=lambda x: epi_name_score(x), reverse=True)
+    out2 = sorted(episodes_by_name_dict.items(), key=lambda x: x[1]["score"], reverse=True)
 
-    # 3.results based on description, should be match here
-    
+    # 3.results based on description, should be a match here
+
     # for these episodes, look for info to fill out the episodes dictionary information
-
-    descrip_query = {
-        "bool": {
-            "must": [
-                {"match": {"ep_description": query}}
-            ]
-        }
-    }
-    episodes_by_decrip = client.search(index="spotify", query=descrip_query)
+    descrip_query = {"match": {"ep_descrption": query}}
+    episodes_by_decrip = client.search(index="metadata", query=descrip_query, size=5)
     episodes_by_descrip_dict = defaultdict(dict)
 
-    for episode in episodes_by_decrip:
+    for episode in episodes_by_decrip["hits"]["hits"]:
 
-        clip_score = episode["_score"]
-        source_data = episode["_source"]
-        clip_id = source_data["id"]
-        clip_text = source_data["words"]
+        epi_name = episode["_source"]["ep_name"]
+        epi_id = episode["_source"]["ep_id"]
+        show_name = episode["_source"]["show_name"]
 
-        epi_name = source_data["ep_name"]
-        show_name = source_data["show_name"]
+        epi_query = {
+            "bool": {
+                "filter":
+                    {"term": {"ep_id": epi_id}}
+            }
+        }  # try bool must term
+        epi_clips = client.search(index="spotify", query=epi_query, size=10)  # TODO 10 as a variable
 
-        clip_info = [clip_id, clip_score, clip_text]
-        if epi_name in episodes_by_descrip_dict.keys():
+        episodes_by_descrip_dict[epi_name]["score"] = episode["_score"]
+        episodes_by_descrip_dict[epi_name]["show name"] = show_name
+        episodes_by_descrip_dict[epi_name]["episode description"] = episode["_source"][
+            "ep_descrption"]
+        episodes_by_descrip_dict[epi_name]["publisher"] = episode["_source"][
+            "publisher"]
+        episodes_by_descrip_dict[epi_name]["clips"] = []
+
+        for clip in epi_clips["hits"]["hits"]:
+            clip_score = clip["_score"]
+            source_data = clip["_source"]
+            clip_id = source_data["offset"]
+            clip_text = source_data["words"]
+
+            clip_info = [clip_id, clip_score, clip_text]
             episodes_by_descrip_dict[epi_name]["clips"].append(clip_info)
-        else:
-            episodes_by_descrip_dict[epi_name]["clips"] = [clip_info, ]
-            episodes_by_descrip_dict[epi_name]["show name"] = show_name
-            episodes_by_descrip_dict[epi_name]["episode description"] = "None"  # TODO
 
-    out3 = sorted(episodes_by_descrip_dict.items(), key=lambda x: epi_descrip_score(x), reverse=True)
+    out3 = sorted(episodes_by_descrip_dict.items(), key=lambda x: x[1]["score"], reverse=True)
 
-    return out1+out2+out3
+    return out2 + out3 + out1
 
 
 def show_total_score(episodes):
@@ -124,37 +153,143 @@ def show_search(query, nbr_of_results):
     for result in results["hits"]["hits"]:
         clip_score = result["_score"]
         source_data = result["_source"]
-        clip_id = source_data["id"]
+        clip_id = source_data["offset"]
         clip_text = source_data["words"]
 
         epi_name = source_data["ep_name"]
         show_name = source_data["show_name"]
 
         clip_info = [clip_id, clip_score, clip_text]
+
+        epi_id = source_data["ep_id"]
+        epi_query = {
+            "bool": {
+                "filter":
+                    {"term": {"ep_id": epi_id}}
+            }
+        }
+        episode = client.search(index="metadata", query=epi_query, size=1)  # TODO reflect on 1
+
         if show_name not in shows.keys():
-            shows[show_name]["show description"] = "Show None"  # TODO from metadata
+            show_source = episode["hits"]["hits"][0]["_source"]
+            shows[show_name]["show description"] = show_source["show_descrption"]
+
             shows[show_name]["episodes"] = dict()
 
         if epi_name in shows[show_name]["episodes"].keys():
             shows[show_name]["episodes"][epi_name]["clips"].append(clip_info)
         else:
             shows[show_name]["episodes"][epi_name] = dict()
+
             shows[show_name]["episodes"][epi_name]["clips"] = [clip_info, ]
             shows[show_name]["episodes"][epi_name]["show name"] = show_name  # TODO delete ?
-            shows[show_name]["episodes"][epi_name]["episode description"] = "Episode None"  # TODO
+
+            ep_source = episode["hits"]["hits"][0]["_source"]
+            shows[show_name]["episodes"][epi_name]["episode description"] = ep_source["ep_descrption"]
+            shows[show_name]["episodes"][epi_name]["publisher"] = ep_source["publisher"]
+
+        # TODO we can change this if else to one bloc actually
+
         # clip_id = result["_id"]
 
     # sum scores
-    out = sorted(shows.items(), key=lambda x: show_total_score(x[1]["episodes"]), reverse=True)
+    out1 = sorted(shows.items(), key=lambda x: show_total_score(x[1]["episodes"]), reverse=True)
 
-    # 2.results based on name and/or description, should be match here
-    # TODO
-    return out
+    # 2.results based on name, should be a match here
+    shows_by_name = client.search(index="metadata", query={"match": {"show_name": query}}, size=5)
+
+    shows_by_name_dict = defaultdict(dict)
+
+    for show in shows_by_name["hits"]["hits"]:
+        show_source = show["_source"]
+        show_name = show_source["show_name"]
+        epi_name = show_source["ep_name"]
+        epi_id = show_source["ep_id"]
+
+        show_query = {
+            "bool": {
+                "filter":
+                    {"term": {"ep_id": epi_id}}
+            }
+        }  # try bool must term
+        epi_clips = client.search(index="spotify", query=show_query, size=10)
+
+        if show_name not in shows_by_name_dict.keys():
+            shows_by_name_dict[show_name]["score"] = show["_score"]
+            shows_by_name_dict[show_name]["show description"] = show_source["show_descrption"]
+
+            shows_by_name_dict[show_name]["episodes"] = dict()
+
+        shows_by_name_dict[show_name]["episodes"][epi_name] = dict()
+
+        shows_by_name_dict[show_name]["episodes"][epi_name]["show name"] = show_name  # TODO delete ?
+
+        shows_by_name_dict[show_name]["episodes"][epi_name]["episode description"] = show_source["ep_descrption"]
+        shows_by_name_dict[show_name]["episodes"][epi_name]["publisher"] = show_source["publisher"]
+        shows_by_name_dict[show_name]["episodes"][epi_name]["clips"] = []
+
+        for clip in epi_clips["hits"]["hits"]:
+            clip_score = clip["_score"]
+            source_data = clip["_source"]
+            clip_id = source_data["offset"]
+            clip_text = source_data["words"]
+
+            clip_info = [clip_id, clip_score, clip_text]
+
+            shows_by_name_dict[show_name]["episodes"][epi_name]["clips"].append(clip_info)
+
+    out2 = sorted(shows_by_name_dict.items(), key=lambda x: x[1]["score"], reverse=True)
+
+    # 3.results based on description, should be match here
+    shows_by_descr = client.search(index="metadata", query={"match": {"show_descrption": query}}, size=5)
+
+    shows_by_descr_dict = defaultdict(dict)
+
+    for show in shows_by_descr["hits"]["hits"]:
+        show_source = show["_source"]
+        show_name = show_source["show_name"]
+        epi_name = show_source["ep_name"]
+        epi_id = show_source["ep_id"]
+
+        show_query = {
+            "bool": {
+                "filter":
+                    {"term": {"ep_id": epi_id}}
+            }
+        }  # try bool must term
+        epi_clips = client.search(index="spotify", query=show_query, size=10)
+
+        if show_name not in shows_by_descr_dict.keys():
+            shows_by_descr_dict[show_name]["score"] = show["_score"]
+            shows_by_descr_dict[show_name]["show description"] = show_source["show_descrption"]
+
+            shows_by_descr_dict[show_name]["episodes"] = dict()
+
+        shows_by_descr_dict[show_name]["episodes"][epi_name] = dict()
+
+        shows_by_descr_dict[show_name]["episodes"][epi_name]["show name"] = show_name  # TODO delete ?
+
+        shows_by_descr_dict[show_name]["episodes"][epi_name]["episode description"] = show_source["ep_descrption"]
+        shows_by_descr_dict[show_name]["episodes"][epi_name]["publisher"] = show_source["publisher"]
+        shows_by_descr_dict[show_name]["episodes"][epi_name]["clips"] = []
+
+        for clip in epi_clips["hits"]["hits"]:
+            clip_score = clip["_score"]
+            source_data = clip["_source"]
+            clip_id = source_data["offset"]
+            clip_text = source_data["words"]
+
+            clip_info = [clip_id, clip_score, clip_text]
+
+            shows_by_descr_dict[show_name]["episodes"][epi_name]["clips"].append(clip_info)
+
+    out3 = sorted(shows_by_descr_dict.items(), key=lambda x: x[1]["score"], reverse=True)
+
+    return out2+out3+out1  # TODO check duplicates
 
 
 if __name__ == "__main__":
-
     clips_nbr = 100
 
     client = connect_elastic()
-    res = show_search("coronavirus spread", clips_nbr)
+    res = episode_search("experiences", clips_nbr)
