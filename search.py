@@ -144,7 +144,15 @@ def automatic_query(client, ep_id, query_string, pre_offset):
 
 
 def search(client, query_string, n, query_type="specified"):
-    query_results = client.search(index="spotify", query={"match": {"words": query_string}}, size=str(MAX_RESULT_NUMBER * 100))
+    query_results = client.search(
+        index="spotify",
+        query={
+            "match": {
+                #"words": query_string
+                "words.stemmed": query_string
+            }
+        },
+        size=str(MAX_RESULT_NUMBER * 100))
 
     existed_content = {}
     search_results = []
