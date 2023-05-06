@@ -54,15 +54,19 @@ def episode_search(client, query, nbr_of_results):
     for key, val in episodes_by_clip_dict.items():
         episodes_by_clip_dict[key]["score"] = epi_total_score(val["clips"])
     out1 = sorted(episodes_by_clip_dict.items(), key=lambda x: x[1]["score"], reverse=True)
+
+    return out1
+
+
+def episode_search_by_name(query, nbr_of_results=5):
     # 2.results based on name, should be a match here
     # for these episodes, look for info to fill out the episodes dictionary information
-
     names_query = {
         "match": {
             "ep_name": query
         }
     }
-    episodes_by_name = client.search(index="metadata", query=names_query, size=5)  # TODO 5 as a variable, we have duplicates here cause of indexing
+    episodes_by_name = client.search(index="metadata", query=names_query, size=str(nbr_of_results))  # TODO 5 as a variable, we have duplicates here cause of indexing
 
     episodes_by_name_dict = defaultdict(dict)
 
@@ -98,11 +102,16 @@ def episode_search(client, query, nbr_of_results):
 
     out2 = sorted(episodes_by_name_dict.items(), key=lambda x: x[1]["score"], reverse=True)
 
+    return out2
+
+
+def episode_search_by_desc(query, nbr_of_results=5):
+
     # 3.results based on description, should be a match here
 
     # for these episodes, look for info to fill out the episodes dictionary information
     descrip_query = {"match": {"ep_descrption": query}}
-    episodes_by_decrip = client.search(index="metadata", query=descrip_query, size=5)
+    episodes_by_decrip = client.search(index="metadata", query=descrip_query, size=str(nbr_of_results))
     episodes_by_descrip_dict = defaultdict(dict)
 
     for episode in episodes_by_decrip["hits"]["hits"]:
@@ -138,15 +147,14 @@ def episode_search(client, query, nbr_of_results):
 
     out3 = sorted(episodes_by_descrip_dict.items(), key=lambda x: x[1]["score"], reverse=True)
 
-    # return out2 + out3 + out1
-    return out1
+    return out3
 
 
 def show_total_score(episodes):
     return sum([epi_total_score(episode["clips"]) for episode in episodes.values()])
 
 
-def show_search(query, nbr_of_results):
+def show_search_by_clip(query, nbr_of_results):
     # 1.results based on content
     results = client.search(index="spotify", query={"match": {"words": query}}, size=str(nbr_of_results))
 
@@ -196,9 +204,13 @@ def show_search(query, nbr_of_results):
 
     # sum scores
     out1 = sorted(shows.items(), key=lambda x: show_total_score(x[1]["episodes"]), reverse=True)
+    return out1
+
+
+def show_search_by_name(query, nbr_of_results=5):
 
     # 2.results based on name, should be a match here
-    shows_by_name = client.search(index="metadata", query={"match": {"show_name": query}}, size=5)
+    shows_by_name = client.search(index="metadata", query={"match": {"show_name": query}}, size=str(nbr_of_results))
 
     shows_by_name_dict = defaultdict(dict)
 
@@ -241,9 +253,12 @@ def show_search(query, nbr_of_results):
             shows_by_name_dict[show_name]["episodes"][epi_name]["clips"].append(clip_info)
 
     out2 = sorted(shows_by_name_dict.items(), key=lambda x: x[1]["score"], reverse=True)
+    return out2
 
-    # 3.results based on description, should be match here
-    shows_by_descr = client.search(index="metadata", query={"match": {"show_descrption": query}}, size=5)
+
+def show_search_by_desc(query, nbr_of_results=5):
+    # 3.results based on description, should be a match here
+    shows_by_descr = client.search(index="metadata", query={"match": {"show_descrption": query}}, size=str(nbr_of_results))
 
     shows_by_descr_dict = defaultdict(dict)
 
@@ -287,11 +302,11 @@ def show_search(query, nbr_of_results):
 
     out3 = sorted(shows_by_descr_dict.items(), key=lambda x: x[1]["score"], reverse=True)
 
-    return out2+out3+out1  # TODO check duplicates
+    return out3  # TODO check duplicates
 
 
 if __name__ == "__main__":
     clips_nbr = 100
 
     client = connect_elastic()
-    res = episode_search("experiences", clips_nbr)
+    res = episode_search_by_clip("hello", clips_nbr)
