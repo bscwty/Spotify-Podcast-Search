@@ -147,7 +147,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
     return max_chunk_score, text, offset, offset_range
 
 
-def search(client, query_string, n, query_type="specified"):
+def search(client, query_string, n, res_num, query_type="specified"):
     query_results = client.search(
         index="spotify",
         query={
@@ -156,7 +156,8 @@ def search(client, query_string, n, query_type="specified"):
                 "words.stemmed": query_string
             }
         },
-        size=str(MAX_RESULT_NUMBER * 100))
+        # size=str(MAX_RESULT_NUMBER * 100))
+        size = str(res_num * 100))
 
     existed_content = {}
     search_results = []
@@ -206,7 +207,8 @@ def search(client, query_string, n, query_type="specified"):
                     search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range])
                     result_num += 1
 
-        if result_num == MAX_RESULT_NUMBER:
+        # if result_num == MAX_RESULT_NUMBER:
+        if result_num == res_num:
             break
 
     return sorted(search_results, key=lambda x: x[1], reverse=True)

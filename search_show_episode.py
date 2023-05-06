@@ -14,7 +14,7 @@ def epi_descrip_score(x):
     return 0
 
 
-def episode_search(query, nbr_of_results):
+def episode_search(client, query, nbr_of_results):
     # 1.results based on content
     results = client.search(index="spotify", query={"match": {"words": query}}, size=str(nbr_of_results))
 
@@ -51,8 +51,9 @@ def episode_search(query, nbr_of_results):
         # TODO change if else to one bloc
 
     # sum scores
-    out1 = sorted(episodes_by_clip_dict.items(), key=lambda x: epi_total_score(x[1]["clips"]), reverse=True)
-
+    for key, val in episodes_by_clip_dict.items():
+        episodes_by_clip_dict[key]["score"] = epi_total_score(val["clips"])
+    out1 = sorted(episodes_by_clip_dict.items(), key=lambda x: x[1]["score"], reverse=True)
     # 2.results based on name, should be a match here
     # for these episodes, look for info to fill out the episodes dictionary information
 
@@ -137,7 +138,8 @@ def episode_search(query, nbr_of_results):
 
     out3 = sorted(episodes_by_descrip_dict.items(), key=lambda x: x[1]["score"], reverse=True)
 
-    return out2 + out3 + out1
+    # return out2 + out3 + out1
+    return out1
 
 
 def show_total_score(episodes):
