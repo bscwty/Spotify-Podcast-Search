@@ -31,6 +31,9 @@ class SearchRes():
         self.relevance_matrix = np.zeros((n, levels), dtype=int)
         self.nDCG_vector = np.zeros(n)
 
+    def get_vector(self):
+        return self.relevance_matrix.shape[0]
+
     def get_relevance(self, idx):
         rel = self.relevance_matrix[idx].nonzero()
         if len(rel[0]) > 0:
@@ -280,7 +283,7 @@ class SearchGui():
         event.widget.tag_add('boldtext', f'{tag}.first', f'{tag}.last')
         sum_rel = 0
         prec = []
-        for i in range(len(self.text_store)):
+        for i in range(self.text_store.get_vector()):
             rel = self.text_store.get_relevance(i)
             if rel not in [None, 0]:
                 sum_rel += 1
@@ -348,11 +351,11 @@ class SearchGui():
                         self.result.tag_config(tag_rel3)
                         self.result.tag_bind(
                             tag_rel3, '<Button-1>', lambda e, t=tag_rel3: self.relevance(e, t))
-                    if eval == '2':
-                        tag_rel4 = f'tagrel4_{i}'
-                        self.result.tag_config(tag_rel4)
-                        self.result.tag_bind(
-                            tag_rel4, '<Button-1>', lambda e, t=tag_rel4: self.relevance(e, t))
+                        if eval == '2':
+                            tag_rel4 = f'tagrel4_{i}'
+                            self.result.tag_config(tag_rel4)
+                            self.result.tag_bind(
+                                tag_rel4, '<Button-1>', lambda e, t=tag_rel4: self.relevance(e, t))
                     #Show title
                     self.result.insert(END, f'{i+1}. {line[2]}\n', (tag_expand,))
                     #Episode title
@@ -373,9 +376,9 @@ class SearchGui():
                         self.result.insert(END, '\t3', (tag_rel3,))
                         if eval != '2':
                             self.result.insert(END, '\n')
-                    if eval == '2':
-                        self.result.insert(END, '\t4\n', (tag_rel4,))
-                    self.result.insert(END, '---------\n')
+                        else:
+                            self.result.insert(END, '\t4', (tag_rel4,))
+                    self.result.insert(END, '\n---------\n')
                 if eval in ['1', '2']:
                     self.compute.config(state=NORMAL)
                     self.nDCG_box.config(state=NORMAL)
@@ -408,12 +411,13 @@ class SearchGui():
                 self.result.insert(END, 'Please enter a search query in the query bar.')
                 self.result.config(state=DISABLED)
                 return
-            search_res = sse.episode_search(client, query_terms, int(self.value_r.get()))
+            search_res, num_clips = sse.episode_search(client, query_terms, int(self.value_r.get()))
 
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
             else:
-                self.text_store.init_vector(len(search_res), 4 if self.option in ['0', '1'] else 5)
+                self.text_store.init_vector(num_clips, 4 if self.option in ['0', '1'] else 5)
+                clip_counter = 0
                 for i, line in enumerate(search_res):
                     #Tags
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
@@ -425,27 +429,28 @@ class SearchGui():
                     self.result.tag_bind(
                         tag_expand, '<Button-1>', lambda e, t=tag_expand, s='episode': self.text_expand(e, t, s))
                     if eval in ['1', '2']:
-                        tag_rel0 = f'tagrel0_{i}'
-                        self.result.tag_config(tag_rel0)
-                        self.result.tag_bind(
-                            tag_rel0, '<Button-1>', lambda e, t=tag_rel0: self.relevance(e, t))
-                        tag_rel1 = f'tagrel1_{i}'
-                        self.result.tag_config(tag_rel1)
-                        self.result.tag_bind(
-                            tag_rel1, '<Button-1>', lambda e, t=tag_rel1: self.relevance(e, t))
-                        tag_rel2 = f'tagrel2_{i}'
-                        self.result.tag_config(tag_rel2)
-                        self.result.tag_bind(
-                            tag_rel2, '<Button-1>', lambda e, t=tag_rel2: self.relevance(e, t))
-                        tag_rel3 = f'tagrel3_{i}'
-                        self.result.tag_config(tag_rel3)
-                        self.result.tag_bind(
-                            tag_rel3, '<Button-1>', lambda e, t=tag_rel3: self.relevance(e, t))
-                    if eval == '2':
-                        tag_rel4 = f'tagrel4_{i}'
-                        self.result.tag_config(tag_rel4)
-                        self.result.tag_bind(
-                            tag_rel4, '<Button-1>', lambda e, t=tag_rel4: self.relevance(e, t))
+                        for j in range(len(line[1]['clips'])):
+                            tag_rel0 = f'tagrel0_{clip_counter+j}'
+                            self.result.tag_config(tag_rel0)
+                            self.result.tag_bind(
+                                tag_rel0, '<Button-1>', lambda e, t=tag_rel0: self.relevance(e, t))
+                            tag_rel1 = f'tagrel1_{clip_counter+j}'
+                            self.result.tag_config(tag_rel1)
+                            self.result.tag_bind(
+                                tag_rel1, '<Button-1>', lambda e, t=tag_rel1: self.relevance(e, t))
+                            tag_rel2 = f'tagrel2_{clip_counter+j}'
+                            self.result.tag_config(tag_rel2)
+                            self.result.tag_bind(
+                                tag_rel2, '<Button-1>', lambda e, t=tag_rel2: self.relevance(e, t))
+                            tag_rel3 = f'tagrel3_{clip_counter+j}'
+                            self.result.tag_config(tag_rel3)
+                            self.result.tag_bind(
+                                tag_rel3, '<Button-1>', lambda e, t=tag_rel3: self.relevance(e, t))
+                            if eval == '2':
+                                tag_rel4 = f'tagrel4_{clip_counter+j}'
+                                self.result.tag_config(tag_rel4)
+                                self.result.tag_bind(
+                                    tag_rel4, '<Button-1>', lambda e, t=tag_rel4: self.relevance(e, t))
                     #Episode title
                     self.result.insert(END, f'{i+1}. {line[0]}\n', (tag, tag_expand))
                     #Show title
@@ -453,26 +458,30 @@ class SearchGui():
                     #Text
                     indices = [self.result.index('end')]
                     clip_str = []
-                    for clip in line[1]['clips']:
-                        clip_str.append(clip[2])
+                    for j, clip in enumerate(line[1]['clips']):
+                        clip_str.append(f'Clip {clip_counter+1+j}. ' + clip[2])
                     indices.append(clip_str)
                     indices.append(False)
                     self.text_store[i] = indices
-                    # self.result.insert(END, f'{self.text_search(line[4], w, 6)}\nscore: {line[1]}\n', (tag_expand,))
                     self.result.insert(END, f'Description: {line[1]["episode description"]}\nscore: {line[1]["score"]}\n', (tag_expand,))
-                    # if eval in ['1', '2']:
-                    #     self.result.insert(END, 'Select relevance:')
-                    #     self.result.insert(END, '\t0\t', (tag_rel0,))
-                    #     self.result.tag_add('boldtext', f'{tag_rel0}.first', f'{tag_rel0}.last')
-                    #     self.text_store.set_relevance(i, 0)
-                    #     self.result.insert(END, '\t1', (tag_rel1,))
-                    #     self.result.insert(END, '\t2', (tag_rel2,))
-                    #     self.result.insert(END, '\t3', (tag_rel3,))
-                    #     if eval != '2':
-                    #         self.result.insert(END, '\n')
-                    # if eval == '2':
-                    #     self.result.insert(END, '\t4\n', (tag_rel4,))
+                    if eval in ['1', '2']:
+                        for j in range(len(line[1]['clips'])):
+                            self.result.insert(END, 'Select relevance:')
+                            tag_rel0 = f'tagrel0_{clip_counter+j}'
+                            self.result.insert(END, '\t0\t', (tag_rel0,))
+                            self.result.tag_add('boldtext', f'{tag_rel0}.first', f'{tag_rel0}.last')
+                            self.text_store.set_relevance(clip_counter+j, 0)
+                            self.result.insert(END, '\t1', (f'tagrel1_{clip_counter+j}',))
+                            self.result.insert(END, '\t2', (f'tagrel2_{clip_counter+j}',))
+                            self.result.insert(END, '\t3', (f'tagrel3_{clip_counter+j}',))
+                            if eval != '2':
+                                self.result.insert(END, '\n')
+                            else:
+                                self.result.insert(END, '\t4', (f'tagrel4_{clip_counter+j}',))
+                                self.result.insert(END, '\n')
                     self.result.insert(END, '---------\n')
+                    clip_counter += len(line[1]['clips'])
+
                 if eval in ['1', '2']:
                     self.compute.config(state=NORMAL)
                     self.nDCG_box.config(state=NORMAL)

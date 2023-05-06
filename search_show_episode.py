@@ -55,7 +55,7 @@ def episode_search(client, query, nbr_of_results):
         episodes_by_clip_dict[key]["score"] = epi_total_score(val["clips"])
     out1 = sorted(episodes_by_clip_dict.items(), key=lambda x: x[1]["score"], reverse=True)
 
-    return out1
+    return out1, len(results["hits"]["hits"])
 
 
 def episode_search_by_name(query, nbr_of_results=5):
