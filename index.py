@@ -64,7 +64,7 @@ def create_elastic():
         }
     }
 
-    client.indices.create(index='spotify', mappings=spotify_mapping, settings=setting)
+    client.indices.create(index='spotify_new', mappings=spotify_mapping, settings=setting)
     client.indices.create(index='metadata', mappings=metadata_mapping)
 
     return client
@@ -76,7 +76,7 @@ def delete_index(indices):
         client.indices.delete(index=i)
 
 def index_stats(client):
-    size = client.indices.stats(index='spotify', metric=('store'))
+    size = client.indices.stats(index='spotify_new', metric=('store'))
     print(size)
 
 def parse_metadata(file_name):
@@ -114,7 +114,7 @@ def create_doc(clip, clip_idx, show_code, episode_code, global_id):
         "show_id": show_code,
         "ep_id": episode_code
     }
-    client.index(index="spotify", id=global_id, document=doc)
+    client.index(index="spotify_new", id=global_id, document=doc)
 
 def add_metadata(clip_num, show_code, episode_code):
     show_name, episode_name, publisher, show_description, episode_description = metadata[show_code][episode_code]
@@ -152,8 +152,6 @@ def parse_json(folder_name):
                 clip_start_time = - 1.0
                 word_list = []
                 clip_idx = 0
-
-                identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
                 for idx1, alternatives in enumerate(results):
 

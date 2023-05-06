@@ -43,7 +43,7 @@ def query(client, ep_id, query_string, pre_offset, n):
             "should": {"match": {"words": query_string}}
         }
     }
-    ep_results = client.search(index="spotify", query=query, size=str(len(offset_range)))
+    ep_results = client.search(index="spotify_new", query=query, size=str(len(offset_range)))
 
     ep_dict = {}
     for ep_hit in ep_results["hits"]["hits"]:
@@ -99,7 +99,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
             "should": {"match": {"words": query_string}}
         }
     }
-    ep_results = client.search(index="spotify", query=query, size=str(clip_num))
+    ep_results = client.search(index="spotify_new", query=query, size=str(clip_num))
 
     ep_dict = {}
     for ep_hit in ep_results["hits"]["hits"]:
@@ -145,7 +145,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
 
 def search(client, query_string, n, query_type="specified"):
     query_results = client.search(
-        index="spotify",
+        index="spotify_new",
         query={
             "match": {
                 #"words": query_string
