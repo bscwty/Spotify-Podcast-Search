@@ -12,6 +12,29 @@ def create_elastic():
 
     client = connect_elastic()
 
+    setting = {
+        "similarity": {
+        # "default": {
+        #     "type": "BM25",
+        #     "b": 0.4,
+        #     "k1": 0.9
+        # }
+            "podcast_similarity": {
+                "type": "LMDirichlet",
+                "mu": 1000
+            }
+        },
+        #Porter stemming
+        "analysis": {
+            "analyzer": {
+                "podcast_analyzer": {
+                    "tokenizer": "whitespace",
+                    "filter": ["lowercase", "porter_stem"]
+                }
+            }
+        }
+    }
+
     spotify_mapping = {
             "properties": {
                 "offset": {"type": "integer"},
@@ -21,7 +44,8 @@ def create_elastic():
                     "fields": {
                         "stemmed": {
                             "type": "text",
-                            "analyzer": "podcast_analyzer"
+                            "analyzer": "podcast_analyzer",
+                            "similarity": "podcast_similarity"
                         }
                     }
                 },
@@ -43,25 +67,6 @@ def create_elastic():
                 "show_descrption": {"type": "text"},
                 "ep_descrption": {"type": "text"}
             }
-    }
-
-    setting = {
-        "similarity": {
-            "default": {
-                "type": "BM25",
-                "b": 0.4,
-                "k1": 0.9
-            }
-        },
-        #Porter stemming
-        "analysis": {
-            "analyzer": {
-                "podcast_analyzer": {
-                    "tokenizer": "whitespace",
-                    "filter": ["lowercase", "porter_stem"]
-                }
-            }
-        }
     }
 
     client.indices.create(index='spotify', mappings=spotify_mapping, settings=setting)
@@ -152,8 +157,6 @@ def parse_json(folder_name):
                 clip_start_time = - 1.0
                 word_list = []
                 clip_idx = 0
-
-                identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
                 for idx1, alternatives in enumerate(results):
 
