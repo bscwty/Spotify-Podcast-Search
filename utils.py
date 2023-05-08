@@ -5,6 +5,8 @@ from elasticsearch import Elasticsearch
 MAX_RESULT_NUMBER = 20
 AUTOMATIC_THRESHOLD = 0.6
 
+index_dataset = "spotify"
+
 
 def read_password():
     with open('pwd.txt', 'r') as f:

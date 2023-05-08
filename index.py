@@ -4,7 +4,7 @@ import json
 from collections import defaultdict
 from argparse import ArgumentParser
 from elasticsearch import Elasticsearch
-from utils import connect_elastic
+from utils import connect_elastic, index_dataset
 
 
 
@@ -12,16 +12,41 @@ def create_elastic():
 
     client = connect_elastic()
 
+    setting = {
+        "similarity": {
+        # "default": {
+        #     "type": "BM25",
+        #     "b": 0.4,
+        #     "k1": 0.9
+        # }
+            "podcast_similarity": {
+                "type": "LMDirichlet",
+                "mu": 1000
+            }
+        },
+
+        # Porter stemming
+        "analysis": {
+            "analyzer": {
+                "podcast_analyzer": {
+                    "tokenizer": "whitespace",
+                    "filter": ["lowercase", "porter_stem"]
+                }
+            }
+        }
+    }
+
     spotify_mapping = {
             "properties": {
                 "offset": {"type": "integer"},
                 "words": {
                     "type": "text",
-                    #For porter stemming analyzer, defined in setting
+                    # For porter stemming analyzer, defined in setting
                     "fields": {
                         "stemmed": {
                             "type": "text",
-                            "analyzer": "podcast_analyzer"
+                            "analyzer": "podcast_analyzer",
+                            "similarity": "podcast_similarity"
                         }
                     }
                 },
@@ -45,26 +70,7 @@ def create_elastic():
             }
     }
 
-    setting = {
-        "similarity": {
-            "default": {
-                "type": "BM25",
-                "b": 0.4,
-                "k1": 0.9
-            }
-        },
-        #Porter stemming
-        "analysis": {
-            "analyzer": {
-                "podcast_analyzer": {
-                    "tokenizer": "whitespace",
-                    "filter": ["lowercase", "porter_stem"]
-                }
-            }
-        }
-    }
-
-    client.indices.create(index='spotify_new', mappings=spotify_mapping, settings=setting)
+    client.indices.create(index=index_dataset, mappings=spotify_mapping, settings=setting)
     client.indices.create(index='metadata', mappings=metadata_mapping)
 
     return client
@@ -76,7 +82,7 @@ def delete_index(indices):
         client.indices.delete(index=i)
 
 def index_stats(client):
-    size = client.indices.stats(index='spotify_new', metric=('store'))
+    size = client.indices.stats(index=index_dataset, metric=('store'))
     print(size)
 
 def parse_metadata(file_name):
@@ -114,7 +120,7 @@ def create_doc(clip, clip_idx, show_code, episode_code, global_id):
         "show_id": show_code,
         "ep_id": episode_code
     }
-    client.index(index="spotify_new", id=global_id, document=doc)
+    client.index(index=index_dataset, id=global_id, document=doc)
 
 def add_metadata(clip_num, show_code, episode_code):
     show_name, episode_name, publisher, show_description, episode_description = metadata[show_code][episode_code]

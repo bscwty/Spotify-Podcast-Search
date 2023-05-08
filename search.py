@@ -1,8 +1,6 @@
 from datetime import datetime
 from utils import connect_elastic
-from utils import AUTOMATIC_THRESHOLD
-
-index_dataset = "spotify"
+from utils import AUTOMATIC_THRESHOLD, index_dataset
 
 def query(client, ep_id, query_string, pre_offset, n):
     query = {

@@ -1,7 +1,5 @@
 from collections import defaultdict
-from utils import connect_elastic
-
-index_dataset = "spotify"
+from utils import connect_elastic, index_dataset
 
 def epi_total_score(clips):
     return sum([clip[1] for clip in clips])
@@ -17,8 +15,8 @@ def epi_descrip_score(x):
 
 def episode_search(client, query, nbr_of_results):
     # 1.results based on content
-    results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
-    # results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
+    # results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
+    results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
 
     episodes_by_clip_dict = defaultdict(dict)
 
@@ -68,6 +66,7 @@ def episode_search_by_name(query, nbr_of_results=5):
             "ep_name": query
         }
     }
+
     episodes_by_name = client.search(index="metadata", query=names_query, size=str(nbr_of_results))  # TODO 5 as a variable, we have duplicates here cause of indexing
 
     episodes_by_name_dict = defaultdict(dict)
@@ -156,9 +155,9 @@ def show_total_score(episodes):
     return sum([epi_total_score(episode["clips"]) for episode in episodes.values()])
 
 
-def show_search_by_clip(query, nbr_of_results):
+def show_search_by_clip(client, query, nbr_of_results):
     # 1.results based on content
-    results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
+    results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
 
     shows = defaultdict(dict)
 
@@ -206,7 +205,7 @@ def show_search_by_clip(query, nbr_of_results):
 
     # sum scores
     out1 = sorted(shows.items(), key=lambda x: show_total_score(x[1]["episodes"]), reverse=True)
-    return out1
+    return out1, len(results["hits"]["hits"])
 
 
 def show_search_by_name(query, nbr_of_results=5):
