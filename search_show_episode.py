@@ -1,6 +1,7 @@
 from collections import defaultdict
 from utils import connect_elastic
 
+index_dataset = "spotify"
 
 def epi_total_score(clips):
     return sum([clip[1] for clip in clips])
@@ -16,7 +17,8 @@ def epi_descrip_score(x):
 
 def episode_search(client, query, nbr_of_results):
     # 1.results based on content
-    results = client.search(index="spotify", query={"match": {"words": query}}, size=str(nbr_of_results))
+    results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
+    # results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
 
     episodes_by_clip_dict = defaultdict(dict)
 
@@ -81,7 +83,7 @@ def episode_search_by_name(query, nbr_of_results=5):
                     {"term": {"ep_id": epi_id}}
             }
         }  # try bool must term
-        epi_clips = client.search(index="spotify", query=epi_query, size=10)
+        epi_clips = client.search(index=index_dataset, query=epi_query, size=10)
 
         episodes_by_name_dict[epi_name]["score"] = episode["_score"]
         episodes_by_name_dict[epi_name]["show name"] = show_name
@@ -126,7 +128,7 @@ def episode_search_by_desc(query, nbr_of_results=5):
                     {"term": {"ep_id": epi_id}}
             }
         }  # try bool must term
-        epi_clips = client.search(index="spotify", query=epi_query, size=10)  # TODO 10 as a variable
+        epi_clips = client.search(index=index_dataset, query=epi_query, size=10)  # TODO 10 as a variable
 
         episodes_by_descrip_dict[epi_name]["score"] = episode["_score"]
         episodes_by_descrip_dict[epi_name]["show name"] = show_name
@@ -156,7 +158,7 @@ def show_total_score(episodes):
 
 def show_search_by_clip(query, nbr_of_results):
     # 1.results based on content
-    results = client.search(index="spotify", query={"match": {"words": query}}, size=str(nbr_of_results))
+    results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
 
     shows = defaultdict(dict)
 
@@ -226,7 +228,7 @@ def show_search_by_name(query, nbr_of_results=5):
                     {"term": {"ep_id": epi_id}}
             }
         }  # try bool must term
-        epi_clips = client.search(index="spotify", query=show_query, size=10)
+        epi_clips = client.search(index=index_dataset, query=show_query, size=10)
 
         if show_name not in shows_by_name_dict.keys():
             shows_by_name_dict[show_name]["score"] = show["_score"]
@@ -274,7 +276,7 @@ def show_search_by_desc(query, nbr_of_results=5):
                     {"term": {"ep_id": epi_id}}
             }
         }  # try bool must term
-        epi_clips = client.search(index="spotify", query=show_query, size=10)
+        epi_clips = client.search(index=index_dataset, query=show_query, size=10)
 
         if show_name not in shows_by_descr_dict.keys():
             shows_by_descr_dict[show_name]["score"] = show["_score"]

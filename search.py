@@ -1,7 +1,8 @@
 from datetime import datetime
 from utils import connect_elastic
-from utils import MAX_RESULT_NUMBER, AUTOMATIC_THRESHOLD
+from utils import AUTOMATIC_THRESHOLD
 
+index_dataset = "spotify"
 
 def query(client, ep_id, query_string, pre_offset, n):
     query = {
@@ -43,7 +44,7 @@ def query(client, ep_id, query_string, pre_offset, n):
             "should": {"match": {"words": query_string}}
         }
     }
-    ep_results = client.search(index="spotify_new", query=query, size=str(len(offset_range)))
+    ep_results = client.search(index=index_dataset, query=query, size=str(len(offset_range)))
 
     ep_dict = {}
     for ep_hit in ep_results["hits"]["hits"]:
@@ -99,7 +100,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
             "should": {"match": {"words": query_string}}
         }
     }
-    ep_results = client.search(index="spotify_new", query=query, size=str(clip_num))
+    ep_results = client.search(index=index_dataset, query=query, size=str(clip_num))
 
     ep_dict = {}
     for ep_hit in ep_results["hits"]["hits"]:
@@ -145,11 +146,11 @@ def automatic_query(client, ep_id, query_string, pre_offset):
 
 def search(client, query_string, n, res_num, query_type="specified"):
     query_results = client.search(
-        index="spotify_new",
+        index=index_dataset,
         query={
             "match": {
-                #"words": query_string
-                "words.stemmed": query_string
+                "words": query_string
+                # "words.stemmed": query_string
             }
         },
         # size=str(MAX_RESULT_NUMBER * 100))

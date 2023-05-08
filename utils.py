@@ -3,7 +3,7 @@ from elasticsearch import Elasticsearch
 #ELASTIC_PASSWORD = "Yxr9tojql4k9vvgqYNju"
 
 MAX_RESULT_NUMBER = 20
-AUTOMATIC_THRESHOLD = 0.55
+AUTOMATIC_THRESHOLD = 0.6
 
 
 def read_password():

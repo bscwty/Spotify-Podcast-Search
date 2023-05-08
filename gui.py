@@ -320,12 +320,19 @@ class SearchGui():
             w = query_terms.split()[0].lower()
             search_res = se.search(client, query_terms, value_n, int(self.value_r.get()), 'specified' if value_n > 0 else 'automatic')
 
+            print(query_terms)
+
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
             else:
                 self.text_store.init_vector(len(search_res), 4 if self.option in ['0', '1'] else 5)
                 for i, line in enumerate(search_res):
                     #Tags
+
+                    print(i+1)
+                    print(line[2], '\t', line[3])
+                    print(line[4])
+                    print("\n")
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
                     tag = f'tag_{i}'
                     self.result.tag_config(tag, foreground='blue')
@@ -384,6 +391,7 @@ class SearchGui():
                     self.nDCG_box.config(state=NORMAL)
 
             self.result.config(state=DISABLED)
+            print("\n")
         except Exception:
             print(traceback.format_exc())
             self.result.insert(END, 'Error during search.')
@@ -418,8 +426,11 @@ class SearchGui():
             else:
                 self.text_store.init_vector(num_clips, 4 if self.option in ['0', '1'] else 5)
                 clip_counter = 0
+
+                count = 1
                 for i, line in enumerate(search_res):
                     #Tags
+
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
                     tag = f'tag_{i}'
                     self.result.tag_config(tag, foreground='blue')
@@ -430,6 +441,12 @@ class SearchGui():
                         tag_expand, '<Button-1>', lambda e, t=tag_expand, s='episode': self.text_expand(e, t, s))
                     if eval in ['1', '2']:
                         for j in range(len(line[1]['clips'])):
+                            print(count)
+                            print(line[1]["show name"], '\t', line[0])
+                            print(line[1]['clips'][j][-1])
+                            print("\n")
+                            count += 1
+
                             tag_rel0 = f'tagrel0_{clip_counter+j}'
                             self.result.tag_config(tag_rel0)
                             self.result.tag_bind(
