@@ -1,4 +1,5 @@
 from datetime import datetime
+from elasticsearch.client import IndicesClient
 from utils import connect_elastic
 from utils import AUTOMATIC_THRESHOLD, index_dataset
 
@@ -39,8 +40,7 @@ def query(client, ep_id, query_string, pre_offset, n):
                 {"terms": {"offset": [str(i) for i in offset_range]}},
                 {"term": {"ep_id": ep_id}}
             ],
-            # "should": {"match": {"words": query_string}}
-            "should": {"match": {"words.stemmed": query_string}}
+            "should": {"match": {"words": query_string}}
         }
     }
     ep_results = client.search(index=index_dataset, query=query, size=str(len(offset_range)))
@@ -96,8 +96,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
             "must": [
                 {"term": {"ep_id": ep_id}}
             ],
-            # "should": {"match": {"words": query_string}}
-            "should": {"match": {"words.stemmed": query_string}}
+            "should": {"match": {"words": query_string}}
         }
     }
     ep_results = client.search(index=index_dataset, query=query, size=str(clip_num))
@@ -144,13 +143,36 @@ def automatic_query(client, ep_id, query_string, pre_offset):
     return max_chunk_score, text, offset, offset_range
 
 
-def search(client, query_string, n, res_num, query_type="specified"):
+def search(client, query_string, n, res_num, query_type="specified", random_vectors=None):
+    new_query_string = query_string
+
+    if random_vectors is not None:
+        indices_client = IndicesClient(client)        
+        analyzed = indices_client.analyze(
+            body={
+                "tokenizer": "standard",
+                "filter": ["stop"],
+                "text": query_string
+            }
+        )
+        pruned_list = []
+        for token in analyzed["tokens"]:
+            pruned_list.append(token["token"])
+        if len(pruned_list) > 0:
+            related = random_vectors.find_nearest(pruned_list, k=3)
+            if related is not None:
+                words = []
+                for word_list in related:
+                    for word in word_list:
+                        words.append(word[0])
+                new_query_string = ' '.join(words)
+
     query_results = client.search(
         index=index_dataset,
         query={
             "match": {
-                # "words": query_string
-                "words.stemmed": query_string
+                #"words": query_string
+                "words.stemmed": new_query_string
             }
         },
         # size=str(MAX_RESULT_NUMBER * 100))
@@ -222,7 +244,7 @@ def search(client, query_string, n, res_num, query_type="specified"):
         if result_num == res_num:
             break
 
-    return sorted(search_results, key=lambda x: x[1], reverse=True)
+    return sorted(search_results, key=lambda x: x[1], reverse=True), new_query_string
 
 
 if __name__ == "__main__":
