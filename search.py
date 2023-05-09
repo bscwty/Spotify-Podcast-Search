@@ -1,4 +1,5 @@
 from datetime import datetime
+from elasticsearch.client import IndicesClient
 from utils import connect_elastic
 from utils import MAX_RESULT_NUMBER, AUTOMATIC_THRESHOLD
 
@@ -147,13 +148,36 @@ def automatic_query(client, ep_id, query_string, pre_offset):
     return max_chunk_score, text, offset, offset_range
 
 
-def search(client, query_string, n, res_num, query_type="specified"):
+def search(client, query_string, n, res_num, query_type="specified", random_vectors=None):
+    new_query_string = query_string
+
+    if random_vectors is not None:
+        indices_client = IndicesClient(client)        
+        analyzed = indices_client.analyze(
+            body={
+                "tokenizer": "standard",
+                "filter": ["stop"],
+                "text": query_string
+            }
+        )
+        pruned_list = []
+        for token in analyzed["tokens"]:
+            pruned_list.append(token["token"])
+        if len(pruned_list) > 0:
+            related = random_vectors.find_nearest(pruned_list, k=3)
+            if related is not None:
+                words = []
+                for word_list in related:
+                    for word in word_list:
+                        words.append(word[0])
+                new_query_string = ' '.join(words)
+
     query_results = client.search(
         index="spotify",
         query={
             "match": {
                 #"words": query_string
-                "words.stemmed": query_string
+                "words.stemmed": new_query_string
             }
         },
         # size=str(MAX_RESULT_NUMBER * 100))

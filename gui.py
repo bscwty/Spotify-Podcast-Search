@@ -5,6 +5,7 @@ from tkinter import ttk
 from utils import *
 import search as se
 import search_show_episode as sse
+from random_indexing import RandomIndexing
 
 
 
@@ -61,6 +62,8 @@ class SearchRes():
 
 class SearchGui():
     def __init__(self, root, title):
+        self.random_index = RandomIndexing(['ri.txt'], dimension=100, non_zero=10)
+        self.random_index.load(self.random_index.get_files()[0])
         self.root = root
         self.root.title(title)
         self.root.option_add('*tearOff', FALSE)
@@ -322,7 +325,7 @@ class SearchGui():
                 self.result.config(state=DISABLED)
                 return
             w = query_terms.split()[0].lower()
-            search_res = se.search(client, query_terms, value_n, int(self.value_r.get()), 'specified' if value_n > 0 else 'automatic')
+            search_res = se.search(client, query_terms, value_n, int(self.value_r.get()), 'specified' if value_n > 0 else 'automatic', self.random_index)
 
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
