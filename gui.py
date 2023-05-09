@@ -110,6 +110,12 @@ class SearchGui():
         self.query_entry = ttk.Entry(self.topframe, width=80, textvariable=self.query)
         self.query_entry.grid(column=0, row=1, columnspan=3, sticky=(W, E), pady=10)
 
+        #Query expansion
+        self.q_expansion = StringVar(None, '0')
+        self.check_expansion = ttk.Checkbutton(self.topframe, text='Query Expansion', \
+            variable=self.q_expansion, onvalue='1', offvalue='0')
+        self.check_expansion.grid(column=1, row=0, sticky=W)
+
         #Validation
         def check_choose_n(val):
             return (val.isnumeric() and len(val) < 3 and int(val) >= 0 and int(val) <= 20) or len(val) == 0
@@ -325,9 +331,14 @@ class SearchGui():
                 self.result.config(state=DISABLED)
                 return
             w = query_terms.split()[0].lower()
-            search_res = se.search(client, query_terms, value_n, int(self.value_r.get()), 'specified' if value_n > 0 else 'automatic', self.random_index)
-
-            print(query_terms)
+            search_res, nquery = se.search(
+                client, query_terms, value_n, int(self.value_r.get()), \
+                'specified' if value_n > 0 else 'automatic', \
+                self.random_index if self.q_expansion.get() == '1' else None)
+            
+            if nquery != query_terms:
+                self.query_entry.delete(0, END)
+                self.query_entry.insert(END, nquery)
 
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
@@ -336,10 +347,10 @@ class SearchGui():
                 for i, line in enumerate(search_res):
                     #Tags
 
-                    print(i+1)
-                    print(line[2], '\t', line[3])
-                    print(line[4])
-                    print("\n")
+                    # print(i+1)
+                    # print(line[2], '\t', line[3])
+                    # print(line[4])
+                    # print("\n")
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
                     tag = f'tag_{i}'
                     self.result.tag_config(tag, foreground='blue')

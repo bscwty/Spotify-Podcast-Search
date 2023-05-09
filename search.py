@@ -244,7 +244,7 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
         if result_num == res_num:
             break
 
-    return sorted(search_results, key=lambda x: x[1], reverse=True)
+    return sorted(search_results, key=lambda x: x[1], reverse=True), new_query_string
 
 
 if __name__ == "__main__":

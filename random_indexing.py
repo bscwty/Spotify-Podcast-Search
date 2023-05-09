@@ -249,8 +249,8 @@ class RandomIndexing(object):
             wv = self.get_word_vector(w)
             if wv is not None:
                 indexes.append(w)
-            else:
-                print(f'{w} not present in vocabulary.')
+            # else:
+            #     print(f'{w} not present in vocabulary.')
         if len(indexes) > 0:
             Q = np.zeros((len(indexes), self.__dim))
             for i, w in enumerate(indexes):
