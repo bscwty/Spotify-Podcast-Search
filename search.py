@@ -39,7 +39,8 @@ def query(client, ep_id, query_string, pre_offset, n):
                 {"terms": {"offset": [str(i) for i in offset_range]}},
                 {"term": {"ep_id": ep_id}}
             ],
-            "should": {"match": {"words": query_string}}
+            # "should": {"match": {"words": query_string}}
+            "should": {"match": {"words.stemmed": query_string}}
         }
     }
     ep_results = client.search(index=index_dataset, query=query, size=str(len(offset_range)))
@@ -95,7 +96,8 @@ def automatic_query(client, ep_id, query_string, pre_offset):
             "must": [
                 {"term": {"ep_id": ep_id}}
             ],
-            "should": {"match": {"words": query_string}}
+            # "should": {"match": {"words": query_string}}
+            "should": {"match": {"words.stemmed": query_string}}
         }
     }
     ep_results = client.search(index=index_dataset, query=query, size=str(clip_num))
@@ -147,8 +149,8 @@ def search(client, query_string, n, res_num, query_type="specified"):
         index=index_dataset,
         query={
             "match": {
-                "words": query_string
-                # "words.stemmed": query_string
+                # "words": query_string
+                "words.stemmed": query_string
             }
         },
         # size=str(MAX_RESULT_NUMBER * 100))
