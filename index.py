@@ -4,7 +4,7 @@ import json
 from collections import defaultdict
 from argparse import ArgumentParser
 from elasticsearch import Elasticsearch
-from utils import connect_elastic
+from utils import connect_elastic, index_dataset
 
 
 
@@ -24,7 +24,8 @@ def create_elastic():
                 "mu": 1000
             }
         },
-        #Porter stemming
+
+        # Porter stemming
         "analysis": {
             "analyzer": {
                 "podcast_analyzer": {
@@ -40,7 +41,7 @@ def create_elastic():
                 "offset": {"type": "integer"},
                 "words": {
                     "type": "text",
-                    #For porter stemming analyzer, defined in setting
+                    # For porter stemming analyzer, defined in setting
                     "fields": {
                         "stemmed": {
                             "type": "text",
@@ -69,7 +70,7 @@ def create_elastic():
             }
     }
 
-    client.indices.create(index='spotify', mappings=spotify_mapping, settings=setting)
+    client.indices.create(index=index_dataset, mappings=spotify_mapping, settings=setting)
     client.indices.create(index='metadata', mappings=metadata_mapping)
 
     return client
@@ -81,7 +82,7 @@ def delete_index(indices):
         client.indices.delete(index=i)
 
 def index_stats(client):
-    size = client.indices.stats(index='spotify', metric=('store'))
+    size = client.indices.stats(index=index_dataset, metric=('store'))
     print(size)
 
 def parse_metadata(file_name):
@@ -119,7 +120,7 @@ def create_doc(clip, clip_idx, show_code, episode_code, global_id):
         "show_id": show_code,
         "ep_id": episode_code
     }
-    client.index(index="spotify", id=global_id, document=doc)
+    client.index(index=index_dataset, id=global_id, document=doc)
 
 def add_metadata(clip_num, show_code, episode_code):
     show_name, episode_name, publisher, show_description, episode_description = metadata[show_code][episode_code]

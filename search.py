@@ -1,12 +1,7 @@
 from datetime import datetime
 from elasticsearch.client import IndicesClient
 from utils import connect_elastic
-from utils import MAX_RESULT_NUMBER, AUTOMATIC_THRESHOLD
-
-'''
-TODO: episode, podcast, content
-'''
-
+from utils import AUTOMATIC_THRESHOLD, index_dataset
 
 def query(client, ep_id, query_string, pre_offset, n):
     query = {
@@ -48,7 +43,7 @@ def query(client, ep_id, query_string, pre_offset, n):
             "should": {"match": {"words": query_string}}
         }
     }
-    ep_results = client.search(index="spotify", query=query, size=str(len(offset_range)))
+    ep_results = client.search(index=index_dataset, query=query, size=str(len(offset_range)))
 
     ep_dict = {}
     for ep_hit in ep_results["hits"]["hits"]:
@@ -104,7 +99,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
             "should": {"match": {"words": query_string}}
         }
     }
-    ep_results = client.search(index="spotify", query=query, size=str(clip_num))
+    ep_results = client.search(index=index_dataset, query=query, size=str(clip_num))
 
     ep_dict = {}
     for ep_hit in ep_results["hits"]["hits"]:
@@ -173,7 +168,7 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
                 new_query_string = ' '.join(words)
 
     query_results = client.search(
-        index="spotify",
+        index=index_dataset,
         query={
             "match": {
                 #"words": query_string
@@ -201,7 +196,8 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
                 existed_content[ep_id] = []
                 existed_content[ep_id].append(pre_offset)
                 offset = pre_offset
-                search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset]])
+                time = "%.1f min -- %.1f min"%(0.5 * offset, 0.5 * offset + 0.5)
+                search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset], time])
                 result_num += 1
             else:
                 if query_type == "specified":
@@ -211,14 +207,21 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
 
                 existed_content[ep_id] = []
                 existed_content[ep_id].extend(offset_range)
-                search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range])
+
+                if len(offset_range) == 1:
+                    time = "%.1f min -- %.1f min"%(0.5 * offset_range[0], 0.5 * offset_range[0] + 0.5)
+                else:
+                    time = "%.1f min -- %.1f min" % (0.5 * offset_range[0], 0.5 * offset_range[-1] + 0.5)
+
+                search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range, time])
                 result_num += 1
         else:
             if n == 1:
                 if pre_offset not in existed_content[ep_id]:
                     existed_content[ep_id].append(pre_offset)
                     offset = pre_offset
-                    search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset]])
+                    time = "%.1f min -- %.1f min"%(0.5 * offset, 0.5 * offset + 0.5)
+                    search_results.append([ep_id, score, show_name, ep_name, words, offset, [offset], time])
                     result_num += 1
             else:
                 if query_type == "specified":
@@ -228,7 +231,13 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
 
                 if len(set(offset_range).intersection(set(existed_content[ep_id]))) == 0:
                     existed_content[ep_id].extend(offset_range)
-                    search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range])
+
+                    if len(offset_range) == 1:
+                        time = "%.1f min -- %.1f min" % (0.5 * offset_range[0], 0.5 * offset_range[0] + 0.5)
+                    else:
+                        time = "%.1f min -- %.1f min" % (0.5 * offset_range[0], 0.5 * offset_range[-1] + 0.5)
+
+                    search_results.append([ep_id, score, show_name, ep_name, words, offset, offset_range, time])
                     result_num += 1
 
         # if result_num == MAX_RESULT_NUMBER:
@@ -241,9 +250,6 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
 if __name__ == "__main__":
 
     client = connect_elastic()
-    # a = search(client, "virus", 6, "specified")
-    # for r in a:
-    #     print(r[0], r[6])
 
     print("------")
 

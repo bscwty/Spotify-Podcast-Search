@@ -327,12 +327,19 @@ class SearchGui():
             w = query_terms.split()[0].lower()
             search_res = se.search(client, query_terms, value_n, int(self.value_r.get()), 'specified' if value_n > 0 else 'automatic', self.random_index)
 
+            print(query_terms)
+
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
             else:
                 self.text_store.init_vector(len(search_res), 4 if self.option in ['0', '1'] else 5)
                 for i, line in enumerate(search_res):
                     #Tags
+
+                    print(i+1)
+                    print(line[2], '\t', line[3])
+                    print(line[4])
+                    print("\n")
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
                     tag = f'tag_{i}'
                     self.result.tag_config(tag, foreground='blue')
@@ -365,7 +372,8 @@ class SearchGui():
                     #Show title
                     self.result.insert(END, f'{i+1}. {line[2]}\n', (tag_expand,))
                     #Episode title
-                    self.result.insert(END, f'{line[3]}\n', (tag, 'boldtext', tag_expand))
+                    ep_line = line[3] + "\nTime: " + line[-1]
+                    self.result.insert(END, f'{ep_line}\n', (tag, 'boldtext', tag_expand))
                     #Text
                     indices = [self.result.index('end')]
                     indices.append(line[4])
@@ -390,6 +398,7 @@ class SearchGui():
                     self.nDCG_box.config(state=NORMAL)
 
             self.result.config(state=DISABLED)
+            print("\n")
         except Exception:
             print(traceback.format_exc())
             self.result.insert(END, 'Error during search.')
@@ -417,8 +426,11 @@ class SearchGui():
             else:
                 self.text_store.init_vector(num_clips, 4 if self.option in ['0', '1'] else 5)
                 clip_counter = 0
+
+                count = 1
                 for i, line in enumerate(search_res):
                     #Tags
+
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
                     tag = f'tag_{i}'
                     self.result.tag_config(tag, foreground='blue')
@@ -428,6 +440,12 @@ class SearchGui():
                         tag_expand, '<Button-1>', lambda e, t=tag_expand, s='episode': self.text_expand(e, t, s))
                     if eval in ['1', '2']:
                         for j in range(len(line[1]['clips'])):
+                            print(count)
+                            print(line[1]["show name"], '\t', line[0])
+                            print(line[1]['clips'][j][-1])
+                            print("\n")
+                            count += 1
+
                             tag_rel0 = f'tagrel0_{clip_counter+j}'
                             self.result.tag_config(tag_rel0)
                             self.result.tag_bind(
@@ -457,7 +475,8 @@ class SearchGui():
                     indices = [self.result.index('end')]
                     clip_str = []
                     for j, clip in enumerate(line[1]['clips']):
-                        clip_str.append(f'Clip {clip_counter+1+j}. ' + clip[2])
+                        clip_line = "(%s). "%clip[3] + clip[2]
+                        clip_str.append(f'Clip {clip_counter+1+j} ' + clip_line)
                     indices.append(clip_str)
                     indices.append(False)
                     self.text_store[i] = indices
@@ -556,7 +575,8 @@ class SearchGui():
                     c = 0
                     for ep_title, ep_content in line[1]['episodes'].items():
                         for j, clip in enumerate(ep_content['clips']):
-                            clip_str.append(f'Clip {clip_counter+1+c}. Episode title: {ep_title}. Contents: ' + clip[2])
+                            clip_line = "Contents(%s): " % clip[3] + clip[2]
+                            clip_str.append(f'Clip {clip_counter+1+c}. Episode title: {ep_title}. ' + clip_line)
                             c += 1
                     indices.append(clip_str)
                     indices.append(False)
