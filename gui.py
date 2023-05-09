@@ -369,7 +369,8 @@ class SearchGui():
                     #Show title
                     self.result.insert(END, f'{i+1}. {line[2]}\n', (tag_expand,))
                     #Episode title
-                    self.result.insert(END, f'{line[3]}\n', (tag, 'boldtext', tag_expand))
+                    ep_line = line[3] + "\nTime: " + line[-1]
+                    self.result.insert(END, f'{ep_line}\n', (tag, 'boldtext', tag_expand))
                     #Text
                     indices = [self.result.index('end')]
                     indices.append(line[4])
@@ -471,7 +472,8 @@ class SearchGui():
                     indices = [self.result.index('end')]
                     clip_str = []
                     for j, clip in enumerate(line[1]['clips']):
-                        clip_str.append(f'Clip {clip_counter+1+j}. ' + clip[2])
+                        clip_line = "(%s). "%clip[3] + clip[2]
+                        clip_str.append(f'Clip {clip_counter+1+j} ' + clip_line)
                     indices.append(clip_str)
                     indices.append(False)
                     self.text_store[i] = indices
@@ -570,7 +572,8 @@ class SearchGui():
                     c = 0
                     for ep_title, ep_content in line[1]['episodes'].items():
                         for j, clip in enumerate(ep_content['clips']):
-                            clip_str.append(f'Clip {clip_counter+1+c}. Episode title: {ep_title}. Contents: ' + clip[2])
+                            clip_line = "Contents(%s): " % clip[3] + clip[2]
+                            clip_str.append(f'Clip {clip_counter+1+c}. Episode title: {ep_title}. ' + clip_line)
                             c += 1
                     indices.append(clip_str)
                     indices.append(False)

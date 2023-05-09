@@ -28,7 +28,9 @@ def episode_search(client, query, nbr_of_results):
 
         epi_name = source_data["ep_name"]
 
-        clip_info = [clip_id, clip_score, clip_text]
+        clip_time = "%.1f min -- %.1f min" % (0.5 * clip_id, 0.5 * clip_id + 0.5)
+
+        clip_info = [clip_id, clip_score, clip_text, clip_time]
         if epi_name in episodes_by_clip_dict.keys():
             episodes_by_clip_dict[epi_name]["clips"].append(clip_info)
         else:
@@ -170,7 +172,9 @@ def show_search_by_clip(client, query, nbr_of_results):
         epi_name = source_data["ep_name"]
         show_name = source_data["show_name"]
 
-        clip_info = [clip_id, clip_score, clip_text]
+        clip_time = "%.1f min -- %.1f min" % (0.5 * clip_id, 0.5 * clip_id + 0.5)
+
+        clip_info = [clip_id, clip_score, clip_text, clip_time]
 
         epi_id = source_data["ep_id"]
         epi_query = {

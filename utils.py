@@ -5,7 +5,7 @@ from elasticsearch import Elasticsearch
 MAX_RESULT_NUMBER = 20
 AUTOMATIC_THRESHOLD = 0.6
 
-index_dataset = "spotify"
+index_dataset = "spotify_ql"
 
 
 def read_password():
