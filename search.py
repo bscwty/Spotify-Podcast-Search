@@ -166,6 +166,9 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
                     for word in word_list:
                         words.append(word[0])
                 new_query_string = ' '.join(words)
+                for token in analyzed["tokens"]:
+                    if new_query_string.find(token["token"]) == -1:
+                        new_query_string += ' ' + token["token"]
 
     query_results = client.search(
         index=index_dataset,
