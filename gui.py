@@ -343,7 +343,6 @@ class SearchGui():
                 self.query_entry.delete(0, END)
                 self.query_entry.insert(END, nquery)
 
-            print(query_terms)
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
             else:
@@ -355,10 +354,10 @@ class SearchGui():
                     with open("rate.txt", mode='a') as f:
                         f.write(line[0] + ' ' + str(line[-3]) + '\n')
 
-                    print(i+1)
-                    print(line[2], '\t', line[3])
-                    print(line[4])
-                    print("\n")
+                    # print(i+1)
+                    # print(line[2], '\t', line[3])
+                    # print(line[4])
+                    # print("\n")
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
                     tag = f'tag_{i}'
                     self.result.tag_config(tag, foreground='blue')
@@ -415,7 +414,7 @@ class SearchGui():
                 if eval in ['1', '2']:
                     self.compute.config(state=NORMAL)
                     self.nDCG_box.config(state=NORMAL)
-            print('\n')
+
             self.result.config(state=DISABLED)
         except Exception:
             print(traceback.format_exc())
@@ -445,9 +444,7 @@ class SearchGui():
                 self.text_store.init_vector(num_clips, 4 if self.option in ['0', '1'] else 5)
                 clip_counter = 0
 
-                print(query_terms)
-
-                count = 1
+                # count = 1
                 for i, line in enumerate(search_res):
                     #Tags
 
