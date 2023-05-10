@@ -40,4 +40,4 @@ def parse_json(folder_name, output_file):
 
 
 if __name__ == "__main__":
-    parse_json("../podcasts-no-audio-13GB/dataset", "podcast_text.txt")
+    parse_json("../podcasts-no-audio-13GB/dataset/", "podcast_text.txt")

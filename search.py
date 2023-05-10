@@ -1,7 +1,7 @@
 from datetime import datetime
 from elasticsearch.client import IndicesClient
 from utils import connect_elastic
-from utils import AUTOMATIC_THRESHOLD, index_dataset
+from utils import AUTOMATIC_THRESHOLD, index_dataset, MAX_RESULT_LENGTH
 
 def query(client, ep_id, query_string, pre_offset, n):
     query = {
@@ -41,6 +41,7 @@ def query(client, ep_id, query_string, pre_offset, n):
                 {"term": {"ep_id": ep_id}}
             ],
             "should": {"match": {"words": query_string}}
+            # "should": {"match": {"words.stemmed": query_string}}
         }
     }
     ep_results = client.search(index=index_dataset, query=query, size=str(len(offset_range)))
@@ -97,6 +98,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
                 {"term": {"ep_id": ep_id}}
             ],
             "should": {"match": {"words": query_string}}
+            # "should": {"match": {"words.stemmed": query_string}}
         }
     }
     ep_results = client.search(index=index_dataset, query=query, size=str(clip_num))
@@ -117,7 +119,7 @@ def automatic_query(client, ep_id, query_string, pre_offset):
     text = [ep_dict[pre_offset][1]]
 
     while True:
-        left_value = ep_dict[left][0] if left >=0 else -1
+        left_value = ep_dict[left][0] if left >= 0 else -1
         right_value = ep_dict[right][0] if right < clip_num else -1
 
         if left_value < threshold and right_value < threshold:
@@ -130,11 +132,17 @@ def automatic_query(client, ep_id, query_string, pre_offset):
                 text.insert(0, ep_dict[left][1])
                 left -= 1
 
+                if len(offset_range) >= MAX_RESULT_LENGTH:
+                    break
+
             if right_value >= threshold:
                 offset_range.append(right)
                 max_chunk_score += ep_dict[right][0]
                 text.append(ep_dict[right][1])
                 right += 1
+
+                if len(offset_range) >= MAX_RESULT_LENGTH:
+                    break
 
     text = " ".join(text)
     offset_range = list(sorted(offset_range))
@@ -171,8 +179,8 @@ def search(client, query_string, n, res_num, query_type="specified", random_vect
         index=index_dataset,
         query={
             "match": {
-                #"words": query_string
-                "words.stemmed": new_query_string
+                "words": new_query_string
+                # "words.stemmed": new_query_string
             }
         },
         # size=str(MAX_RESULT_NUMBER * 100))
