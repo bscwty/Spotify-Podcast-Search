@@ -413,7 +413,7 @@ if __name__ == '__main__':
         # filenames = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)]
         filenames = ['podcast_text.txt']
 
-        ri = RandomIndexing(filenames, dimension=100, non_zero=10)
+        ri = RandomIndexing(filenames, dimension=200, non_zero=10)
         #TESTING
         # ri.build_vocabulary()
         # print(f'Vocabulary: {ri.vocabulary_size} unique words.')

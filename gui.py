@@ -63,7 +63,7 @@ class SearchRes():
 class SearchGui():
     def __init__(self, root, title):
         try:
-            self.random_index = RandomIndexing(['ri.txt'], dimension=100, non_zero=10)
+            self.random_index = RandomIndexing(['ri.txt'], dimension=200, non_zero=10)
             self.random_index.load(self.random_index.get_files()[0])
         except:
             self.random_index = None
@@ -343,6 +343,7 @@ class SearchGui():
                 self.query_entry.delete(0, END)
                 self.query_entry.insert(END, nquery)
 
+            print(query_terms)
             if len(search_res) == 0:
                 self.result.insert(END, 'No results found.')
             else:
@@ -354,10 +355,10 @@ class SearchGui():
                     with open("rate.txt", mode='a') as f:
                         f.write(line[0] + ' ' + str(line[-3]) + '\n')
 
-                    # print(i+1)
-                    # print(line[2], '\t', line[3])
-                    # print(line[4])
-                    # print("\n")
+                    print(i+1)
+                    print(line[2], '\t', line[3])
+                    print(line[4])
+                    print("\n")
                     self.result.tag_config('boldtext', font=f'{self.result.cget("font")} 12 bold')
                     tag = f'tag_{i}'
                     self.result.tag_config(tag, foreground='blue')
