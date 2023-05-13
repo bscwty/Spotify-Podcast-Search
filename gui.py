@@ -346,7 +346,6 @@ class SearchGui():
                 self.text_store.init_vector(len(search_res), 4 if self.option in ['0', '1'] else 5)
                 for i, line in enumerate(search_res):
                     #Tags
-
                     # print(i+1)
                     # print(line[2], '\t', line[3])
                     # print(line[4])
