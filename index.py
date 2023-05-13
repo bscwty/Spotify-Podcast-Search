@@ -71,7 +71,7 @@ def create_elastic():
     }
 
     client.indices.create(index=index_dataset, mappings=spotify_mapping, settings=setting)
-    client.indices.create(index='metadata', mappings=metadata_mapping)
+    # client.indices.create(index='metadata', mappings=metadata_mapping)
 
     return client
 
@@ -195,7 +195,7 @@ def parse_json(folder_name):
                     global_id += 1
                     clip_idx += 1
 
-                add_metadata(clip_idx, show_code, episode_code)
+                # add_metadata(clip_idx, show_code, episode_code)
 
 
 

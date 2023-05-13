@@ -15,8 +15,8 @@ def epi_descrip_score(x):
 
 def episode_search(client, query, nbr_of_results):
     # 1.results based on content
-    # results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
-    results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
+    results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
+    # results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
 
     episodes_by_clip_dict = defaultdict(dict)
 
@@ -159,8 +159,9 @@ def show_total_score(episodes):
 
 def show_search_by_clip(client, query, nbr_of_results):
     # 1.results based on content
-    results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
-
+    results = client.search(index=index_dataset, query={"match": {"words": query}}, size=str(nbr_of_results))
+    # results = client.search(index=index_dataset, query={"match": {"words.stemmed": query}}, size=str(nbr_of_results))
+    print(results)
     shows = defaultdict(dict)
 
     for result in results["hits"]["hits"]:
